@@ -220,7 +220,7 @@ void send_msg_to_rabbitmq(char const * msg){
     {
         memset(string_buf, 0, 512);
         sprintf(string_buf, "RabbitMQ send error...");
-        ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        ndomod_write_to_logs(string_buf, NSLOG_RUNTIME_WARNING);
     }
     
     free(string_buf);
@@ -280,7 +280,7 @@ int ndomod_init(void){
         char *string_buf = calloc(sizeof(char), 512);
         memset(string_buf, 0, 512);
         sprintf(string_buf, "RabbitMQ has disabled in config file.");
-        ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
     }
     
     /* end rabbitmq process*/
