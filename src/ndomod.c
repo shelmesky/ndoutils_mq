@@ -3829,6 +3829,7 @@ int ndomod_write_object_config(int config_type){
         sprintf(timestamp, "%ld.%ld", now.tv_sec, now.tv_usec);
         
         root = cJSON_CreateObject();
+        cJSON_AddItemToObject(root, "instance_name", cJSON_CreateString(ndomod_instance_name));
         cJSON_AddItemToObject(root, "type", cJSON_CreateString("host_definition"));
         cJSON_AddItemToObject(root, "data", data=cJSON_CreateObject());
         cJSON_AddStringToObject(data, "timestamp", timestamp);
@@ -3848,6 +3849,13 @@ int ndomod_write_object_config(int config_type){
         cJSON_AddNumberToObject(data, "host_max_check_attempts", temp_host->max_attempts);
         cJSON_AddNumberToObject(data, "first_notification_delay", first_notification_delay);
         cJSON_AddNumberToObject(data, "host_notification_interval", (double)temp_host->notification_interval);
+        cJSON_AddNumberToObject(data, "notify_host_down", temp_host->notify_on_down);
+        cJSON_AddNumberToObject(data, "notify_host_unreachable", temp_host->notify_on_unreachable);
+        cJSON_AddNumberToObject(data, "notify_host_recovery", temp_host->notify_on_recovery);
+        cJSON_AddNumberToObject(data, "notify_host_flapping", temp_host->notify_on_flapping);
+        cJSON_AddNumberToObject(data, "notify_host_down_time", notify_on_host_downtime);
+        cJSON_AddNumberToObject(data, "host_flap_detection_enable", temp_host->flap_detection_enabled);
+        
         out = cJSON_PrintUnformatted(root);
         send_msg_to_rabbitmq(out);
         
