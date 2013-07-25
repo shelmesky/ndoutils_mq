@@ -540,16 +540,47 @@ int ndomod_process_config_var(char *arg){
 		}
 	}
 	
-	/* enable rabbitmq in config file */
+	/* process rabbitmq configuration in config file */
 	else if(!strcmp(var, "enable_rabbitmq")){
         if(strlen(val) == 1){
             if(isdigit((int)val[strlen(val)-1]) != NDO_FALSE)
                 enable_rabbitmq = NDO_TRUE;
         }
     }
+    
+    else if(!strcmp(var, "rabbitmq_hostname")){
+        rabbitmq_hostname = strdup(val);
+    }
 	
+    else if(!strcmp(var,"rabbitmq_port")){
+        rabbitmq_port = atoi(val);
+    }
+    
+    else if(!strcmp(var, "rabbitmq_username"))
+    {
+        rabbitmq_username = strdup(val);
+    }
+    
+    else if(!strcmp(var, "rabbitmq_password"))
+    {
+        rabbitmq_password = strdup(val);
+    }
+    
+    else if(!strcmp(var, "rabbitmq_virtualhost"))
+    {
+        rabbitmq_virtualhost = strdup(val);
+    }
 
+    else if(!strcmp(var, "rabbitmq_exchange"))
+    {
+        rabbitmq_exchange = strdup(val);
+    }
 
+    else if(!strcmp(var, "rabbitmq_routingkey"))
+    {
+        rabbitmq_routingkey = strdup(val);
+    }
+    
 	else
 		return NDO_ERROR;
 
