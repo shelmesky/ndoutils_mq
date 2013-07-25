@@ -81,6 +81,7 @@ ndomod_sink_buffer sinkbuf;
 extern int errno;
 
 /* RabbitMQ Configuration */
+int enable_rabbitmq = NDO_FALSE;
 char const *hostname = "127.0.0.1";
 int port = 5672, status;
 char const *exchange = "nagios";
@@ -513,6 +514,15 @@ int ndomod_process_config_var(char *arg){
 				use_ssl = 0;
 		}
 	}
+	
+	/* enable rabbitmq in config file */
+	else if(!strcmp(var, "enable_rabbitmq")){
+        if(strlen(val) == 1){
+            if(isdigit((int)val[strlen(val)-1]) != NDO_FALSE)
+                enable_rabbitmq = NDO_TRUE;
+        }
+    }
+	
 
 
 	else
@@ -716,6 +726,7 @@ int ndomod_rotate_sink_file(void *args){
 /* writes data to sink */
 int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
     /* check if has enabled rabbitmq */
+    if(enable_rabbitmq) return NDO_OK;
     
 	char *temp_buffer=NULL;
 	char *sbuf=NULL;
