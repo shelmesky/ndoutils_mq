@@ -82,10 +82,17 @@ extern int errno;
 
 /* RabbitMQ Configuration */
 int enable_rabbitmq = NDO_FALSE;
-char const *hostname = "127.0.0.1";
-int port = 5672, status;
-char const *exchange = "nagios";
-char const *routingkey = "nagios";
+
+char *rabbitmq_hostname = NULL;
+int rabbitmq_port = 0;
+char *rabbitmq_username = NULL;
+char *rabbitmq_password = NULL;
+
+char *rabbitmq_virtualhost = NULL;
+char *rabbitmq_exchange = NULL;
+char *rabbitmq_routingkey = NULL;
+
+int status;
 amqp_socket_t *mq_socket;
 amqp_connection_state_t mq_conn;
     
@@ -197,16 +204,26 @@ void send_msg_to_rabbitmq(char const * msg){
     props.content_type = amqp_cstring_bytes("text/plain");
     props.delivery_mode = 2; /* persistent delivery mode */
     
-    amqp_basic_publish(
+    char *string_buf = calloc(sizeof(char), 512);
+    
+    status = amqp_basic_publish(
             mq_conn,
             1,
-            amqp_cstring_bytes(exchange),
-            amqp_cstring_bytes(routingkey),
+            amqp_cstring_bytes((rabbitmq_exchange==NULL)?"nagios":rabbitmq_exchange),
+            amqp_cstring_bytes((rabbitmq_routingkey==NULL)?"nagios":rabbitmq_routingkey),
             0,
             0,
             &props,
             amqp_cstring_bytes(msg)
     );
+    if(!(status==0))
+    {
+        memset(string_buf, 0, 512);
+        sprintf(string_buf, "RabbitMQ send error...");
+        ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+    }
+    
+    free(string_buf);
 }
 
 /* performs some initialization stuff */
@@ -221,7 +238,8 @@ int ndomod_init(void){
     mq_conn = amqp_new_connection();
     
     int mq_sock;
-    mq_sock = amqp_open_socket(hostname, port);
+    mq_sock = amqp_open_socket((rabbitmq_hostname==NULL)?"127.0.0.1":rabbitmq_hostname,
+                               (rabbitmq_port==0)?5672:rabbitmq_port);
     if(!mq_sock)
     {
         memset(string_buf, 0, 512);
@@ -229,7 +247,14 @@ int ndomod_init(void){
         ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
     }
     amqp_set_sockfd(mq_conn, mq_sock);
-    amqp_login(mq_conn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, "guest", "guest");
+    amqp_login(mq_conn,
+               (rabbitmq_virtualhost==NULL)?"/":rabbitmq_virtualhost,
+               0,
+               131072,
+               0,
+               AMQP_SASL_METHOD_PLAIN,
+               (rabbitmq_username==NULL)?"guest":rabbitmq_username,
+               (rabbitmq_password==NULL)?"guest":rabbitmq_password);
     amqp_channel_open(mq_conn, 1);
     amqp_get_rpc_reply(mq_conn);
     
