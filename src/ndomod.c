@@ -276,6 +276,12 @@ int ndomod_init(void){
         
         free(string_buf);
     }
+    else{
+        char *string_buf = calloc(sizeof(char), 512);
+        memset(string_buf, 0, 512);
+        sprintf(string_buf, "RabbitMQ has disabled in config file.");
+        ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+    }
     
     /* end rabbitmq process*/
     
