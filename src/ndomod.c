@@ -263,6 +263,17 @@ int ndomod_init(void){
         sprintf(string_buf, "RabbitMQ Init Success.");
         ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
         
+        memset(string_buf, 0, 512);
+        sprintf(string_buf,
+                 "NEB message will send to RabbitMQ: [%s:%d] [virtualhost:%s exchange:%s routingkey:%s]",
+                 rabbitmq_hostname,
+                 rabbitmq_port,
+                 rabbitmq_virtualhost,
+                 rabbitmq_exchange,
+                 rabbitmq_routingkey
+                );
+        ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        
         free(string_buf);
     }
     
@@ -546,7 +557,9 @@ int ndomod_process_config_var(char *arg){
 	else if(!strcmp(var, "rabbitmq_enabled")){
         if(strlen(val) == 1){
             if(isdigit((int)val[strlen(val)-1]) != NDO_FALSE)
-                rabbitmq_enabled = NDO_TRUE;
+                rabbitmq_enabled = atoi(val);
+            else
+                rabbitmq_enabled = 0;
         }
     }
     
@@ -3919,10 +3932,14 @@ int ndomod_write_object_config(int config_type){
             send_msg_to_rabbitmq(out);
         }
         
+        /*
         char string_buf[4096];
         snprintf(string_buf, sizeof(string_buf)-1, "cJSON: %s", out);
         string_buf[sizeof(string_buf)-1] = '\x0';
-        ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        if(rabbitmq_enabled) {
+            ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        }
+        */
         free(out);
         free(timestamp);
         /* end json process */
