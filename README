@@ -1,6 +1,6 @@
 注意：代码仍处于不断更新阶段，请随时更新。
 
-对Nagios的Ndoutils增加向RabbitMQ Server发送消息的功能，主要是修改的是ndomod.c文件。
+对Nagios的Ndoutils增加向RabbitMQ Server发送消息的功能。
 
 过程: 将消息转换为JSON格式后，通过RabbitMQ的C客户端发送到服务器。
 
