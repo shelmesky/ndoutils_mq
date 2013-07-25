@@ -81,7 +81,7 @@ ndomod_sink_buffer sinkbuf;
 extern int errno;
 
 /* RabbitMQ Configuration */
-int enable_rabbitmq = NDO_FALSE;
+int rabbitmq_enabled = NDO_FALSE;
 
 char *rabbitmq_hostname = NULL;
 int rabbitmq_port = 0;
@@ -229,40 +229,42 @@ void send_msg_to_rabbitmq(char const * msg){
 /* performs some initialization stuff */
 int ndomod_init(void){
     /* start connect to rabbitmq server*/
-    char *string_buf = calloc(sizeof(char), 512);
-    
-    memset(string_buf, 0, 512);
-    sprintf(string_buf, "RabbitMQ Library Init...");
-    ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
-    
-    mq_conn = amqp_new_connection();
-    
-    int mq_sock;
-    mq_sock = amqp_open_socket((rabbitmq_hostname==NULL)?"127.0.0.1":rabbitmq_hostname,
-                               (rabbitmq_port==0)?5672:rabbitmq_port);
-    if(!mq_sock)
-    {
+    if(rabbitmq_enabled){
+        char *string_buf = calloc(sizeof(char), 512);
+        
         memset(string_buf, 0, 512);
-        sprintf(string_buf, "RabbitMQ cannot opening connection...");
+        sprintf(string_buf, "RabbitMQ Library Init...");
         ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        
+        mq_conn = amqp_new_connection();
+        
+        int mq_sock;
+        mq_sock = amqp_open_socket((rabbitmq_hostname==NULL)?"127.0.0.1":rabbitmq_hostname,
+                                (rabbitmq_port==0)?5672:rabbitmq_port);
+        if(!mq_sock)
+        {
+            memset(string_buf, 0, 512);
+            sprintf(string_buf, "RabbitMQ cannot opening connection...");
+            ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        }
+        amqp_set_sockfd(mq_conn, mq_sock);
+        amqp_login(mq_conn,
+                (rabbitmq_virtualhost==NULL)?"/":rabbitmq_virtualhost,
+                0,
+                131072,
+                0,
+                AMQP_SASL_METHOD_PLAIN,
+                (rabbitmq_username==NULL)?"guest":rabbitmq_username,
+                (rabbitmq_password==NULL)?"guest":rabbitmq_password);
+        amqp_channel_open(mq_conn, 1);
+        amqp_get_rpc_reply(mq_conn);
+        
+        memset(string_buf, 0, 512);
+        sprintf(string_buf, "RabbitMQ Init Success.");
+        ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        
+        free(string_buf);
     }
-    amqp_set_sockfd(mq_conn, mq_sock);
-    amqp_login(mq_conn,
-               (rabbitmq_virtualhost==NULL)?"/":rabbitmq_virtualhost,
-               0,
-               131072,
-               0,
-               AMQP_SASL_METHOD_PLAIN,
-               (rabbitmq_username==NULL)?"guest":rabbitmq_username,
-               (rabbitmq_password==NULL)?"guest":rabbitmq_password);
-    amqp_channel_open(mq_conn, 1);
-    amqp_get_rpc_reply(mq_conn);
-    
-    memset(string_buf, 0, 512);
-    sprintf(string_buf, "RabbitMQ Init Success.");
-    ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
-    
-    free(string_buf);
     
     /* end rabbitmq process*/
     
@@ -541,10 +543,10 @@ int ndomod_process_config_var(char *arg){
 	}
 	
 	/* process rabbitmq configuration in config file */
-	else if(!strcmp(var, "enable_rabbitmq")){
+	else if(!strcmp(var, "rabbitmq_enabled")){
         if(strlen(val) == 1){
             if(isdigit((int)val[strlen(val)-1]) != NDO_FALSE)
-                enable_rabbitmq = NDO_TRUE;
+                rabbitmq_enabled = NDO_TRUE;
         }
     }
     
@@ -782,7 +784,7 @@ int ndomod_rotate_sink_file(void *args){
 /* writes data to sink */
 int ndomod_write_to_sink(char *buf, int buffer_write, int flush_buffer){
     /* check if has enabled rabbitmq */
-    if(enable_rabbitmq) return NDO_OK;
+    if(rabbitmq_enabled) return NDO_OK;
     
 	char *temp_buffer=NULL;
 	char *sbuf=NULL;
@@ -3913,7 +3915,9 @@ int ndomod_write_object_config(int config_type){
         cJSON_AddNumberToObject(data, "host_flap_detection_enable", temp_host->flap_detection_enabled);
         
         out = cJSON_PrintUnformatted(root);
-        send_msg_to_rabbitmq(out);
+        if(rabbitmq_enabled) {
+            send_msg_to_rabbitmq(out);
+        }
         
         char string_buf[4096];
         snprintf(string_buf, sizeof(string_buf)-1, "cJSON: %s", out);
