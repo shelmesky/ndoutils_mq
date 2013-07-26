@@ -3934,7 +3934,7 @@ int ndomod_write_object_config(int config_type){
         cJSON_AddNumberToObject(data, "host_flap_detection_enable", temp_host->flap_detection_enabled);
         
         parents = cJSON_CreateArray();
-        cJSON_AddItemToObject(root, "parent_hosts", parents);
+        cJSON_AddItemToObject(data, "parent_hosts", parents);
         
         free(es[0]);
         es[0]=NULL;
