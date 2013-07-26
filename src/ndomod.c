@@ -4280,6 +4280,34 @@ int ndomod_write_object_config(int config_type){
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
+        /* start create json object*/
+        cJSON *root, *data, *parents;
+        char *out;
+        char *timestamp = calloc(sizeof(char), 128);
+        sprintf(timestamp, "%ld.%ld", now.tv_sec, now.tv_usec);
+        
+        root = cJSON_CreateObject();
+        cJSON_AddItemToObject(root, "instance_name", cJSON_CreateString(ndomod_instance_name));
+        cJSON_AddItemToObject(root, "type", cJSON_CreateString("service_definition"));
+        cJSON_AddItemToObject(root, "data", data=cJSON_CreateObject());
+        cJSON_AddStringToObject(data, "timestamp", timestamp);
+        
+        cJSON_AddStringToObject(data, "host_name", (es[0]==NULL)?"":es[0]);
+        cJSON_AddStringToObject(data, "display_name", (es[12]==NULL)?"":es[0]);
+        cJSON_AddStringToObject(data, "service_description", (es[1]==NULL)?"":es[1]);
+        cJSON_AddStringToObject(data, "service_check_command", (es[2]==NULL)?"":es[2]);
+        cJSON_AddStringToObject(data, "service_event_handler", (es[3]==NULL)?"":es[3]);
+        
+        // send JSON message to RabbitMQ server
+        out = cJSON_PrintUnformatted(root);
+        if(rabbitmq_enabled) {
+            send_msg_to_rabbitmq(out);
+        }
+        
+        free(out);
+        free(timestamp);
+        /* end json process */
+        
 		free(es[0]);
 		es[0]=NULL;
 
