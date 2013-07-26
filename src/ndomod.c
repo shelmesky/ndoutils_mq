@@ -3900,7 +3900,7 @@ int ndomod_write_object_config(int config_type){
 		ndo_dbuf_strcat(&dbuf,temp_buffer);
 
         /* start create json object*/
-        cJSON *root, *data;
+        cJSON *root, *data, *parents;
         char *out;
         char *timestamp = calloc(sizeof(char), 128);
         sprintf(timestamp, "%ld.%ld", now.tv_sec, now.tv_usec);
@@ -3933,22 +3933,8 @@ int ndomod_write_object_config(int config_type){
         cJSON_AddNumberToObject(data, "notify_host_down_time", notify_on_host_downtime);
         cJSON_AddNumberToObject(data, "host_flap_detection_enable", temp_host->flap_detection_enabled);
         
-        out = cJSON_PrintUnformatted(root);
-        if(rabbitmq_enabled) {
-            send_msg_to_rabbitmq(out);
-        }
-        
-        /*
-        char string_buf[4096];
-        snprintf(string_buf, sizeof(string_buf)-1, "cJSON: %s", out);
-        string_buf[sizeof(string_buf)-1] = '\x0';
-        if(rabbitmq_enabled) {
-            ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
-        }
-        */
-        free(out);
-        free(timestamp);
-        /* end json process */
+        parents = cJSON_CreateArray();
+        cJSON_AddItemToObject(root, "parent_hosts", parents);
         
         free(es[0]);
         es[0]=NULL;
@@ -3966,6 +3952,9 @@ int ndomod_write_object_config(int config_type){
 			temp_buffer[sizeof(temp_buffer)-1]='\x0';
 			ndo_dbuf_strcat(&dbuf,temp_buffer);
 
+            // add parent host to JSON object
+            cJSON_AddItemToArray(parents, cJSON_CreateString((es[0]==NULL)?"":es[0]));
+            
 			free(es[0]);
 			es[0]=NULL;
 		        }
@@ -4041,6 +4030,25 @@ int ndomod_write_object_config(int config_type){
 		ndomod_write_to_sink(dbuf.buf,NDO_TRUE,NDO_TRUE);
 
 		ndo_dbuf_free(&dbuf);
+        
+        // send JSON message to RabbitMQ server
+        out = cJSON_PrintUnformatted(root);
+        if(rabbitmq_enabled) {
+            send_msg_to_rabbitmq(out);
+        }
+        
+        /*
+        char string_buf[4096];
+        snprintf(string_buf, sizeof(string_buf)-1, "cJSON: %s", out);
+        string_buf[sizeof(string_buf)-1] = '\x0';
+        if(rabbitmq_enabled) {
+            ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        }
+        */
+        free(out);
+        free(timestamp);
+        /* end json process */
+ 
 	        }
 
 
