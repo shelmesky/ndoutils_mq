@@ -4298,6 +4298,15 @@ int ndomod_write_object_config(int config_type){
         cJSON_AddStringToObject(data, "service_check_command", (es[2]==NULL)?"":es[2]);
         cJSON_AddStringToObject(data, "service_event_handler", (es[3]==NULL)?"":es[3]);
         
+        cJSON_AddNumberToObject(data, "service_check_interval", (double)temp_service->check_interval);
+        cJSON_AddNumberToObject(data, "service_retry_interval", (double)temp_service->retry_interval);
+        cJSON_AddNumberToObject(data, "service_notification_interval", (double)temp_service->notification_interval);
+        
+        cJSON_AddStringToObject(data, "notes", (es[7]==NULL)?"":es[7]);
+        cJSON_AddStringToObject(data, "notes_url", (es[8]==NULL)?"":es[8]);
+        cJSON_AddStringToObject(data, "action_url", (es[9]==NULL)?"":es[9]);
+        cJSON_AddStringToObject(data, "icon_image", (es[10]==NULL)?"":es[10]);
+        
         // send JSON message to RabbitMQ server
         out = cJSON_PrintUnformatted(root);
         if(rabbitmq_enabled) {
