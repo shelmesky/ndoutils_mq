@@ -1841,6 +1841,44 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,notdata->contacts_notified
 			 ,NDO_API_ENDDATA
 			);
+        
+        // start json process
+        {
+        cJSON *json_root, *json_data, *json_parents;
+        char *json_out;
+        char *timestamp = calloc(sizeof(char), 128);
+        sprintf(timestamp, "%ld.%ld", scdata->timestamp.tv_sec, scdata->timestamp.tv_usec);
+        
+        json_root = cJSON_CreateObject();
+        cJSON_AddItemToObject(json_root, "instance_name", cJSON_CreateString(ndomod_instance_name));
+        cJSON_AddItemToObject(json_root, "message_type", cJSON_CreateString("notification_check"));
+        cJSON_AddItemToObject(json_root, "data", json_data=cJSON_CreateObject());
+        cJSON_AddStringToObject(json_data, "timestamp", timestamp);
+        
+        cJSON_AddNumberToObject(json_data, "type", notdata->type);
+        cJSON_AddNumberToObject(json_data, "flags", notdata->flags);
+        cJSON_AddNumberToObject(json_data, "attr", notdata->attr);
+        cJSON_AddNumberToObject(json_data, "notification_type", notdata->notification_type);
+        
+        cJSON_AddStringToObject(json_data, "host", (es[0]==NULL)?"":es[0]);
+        cJSON_AddStringToObject(json_data, "service", (es[1]==NULL)?"":es[1]);
+        
+        cJSON_AddNumberToObject(json_data, "reason_type", notdata->reason_type);
+        cJSON_AddNumberToObject(json_data, "state", notdata->state);
+        
+        cJSON_AddStringToObject(json_data, "output", (es[2]==NULL)?"":es[2]);
+        cJSON_AddStringToObject(json_data, "long_output", (es[3]==NULL)?"":es[3]);
+        
+        // send JSON message to RabbitMQ server
+        json_out = cJSON_PrintUnformatted(json_root);
+        if(rabbitmq_enabled) {
+            send_msg_to_rabbitmq(json_out);
+        }
+        
+        free(json_out);
+        free(timestamp);
+        /* end json process */
+    }
 
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndo_dbuf_strcat(&dbuf,temp_buffer);
@@ -1925,7 +1963,6 @@ int ndomod_broker_data(int event_type, void *data){
 			);
         
         /* start create json object*/
-    // add CJSON decleration 
     {
         cJSON *json_root, *json_data, *json_parents;
         char *json_out;
@@ -1934,7 +1971,7 @@ int ndomod_broker_data(int event_type, void *data){
         
         json_root = cJSON_CreateObject();
         cJSON_AddItemToObject(json_root, "instance_name", cJSON_CreateString(ndomod_instance_name));
-        cJSON_AddItemToObject(json_root, "type", cJSON_CreateString("service_check"));
+        cJSON_AddItemToObject(json_root, "message_type", cJSON_CreateString("service_check"));
         cJSON_AddItemToObject(json_root, "data", json_data=cJSON_CreateObject());
         cJSON_AddStringToObject(json_data, "timestamp", timestamp);
         
@@ -2062,7 +2099,7 @@ int ndomod_broker_data(int event_type, void *data){
         
         json_root = cJSON_CreateObject();
         cJSON_AddItemToObject(json_root, "instance_name", cJSON_CreateString(ndomod_instance_name));
-        cJSON_AddItemToObject(json_root, "type", cJSON_CreateString("host_check"));
+        cJSON_AddItemToObject(json_root, "message_type", cJSON_CreateString("host_check"));
         cJSON_AddItemToObject(json_root, "data", json_data=cJSON_CreateObject());
         cJSON_AddStringToObject(json_data, "timestamp", timestamp);
         
@@ -4012,7 +4049,7 @@ int ndomod_write_object_config(int config_type){
         
         root = cJSON_CreateObject();
         cJSON_AddItemToObject(root, "instance_name", cJSON_CreateString(ndomod_instance_name));
-        cJSON_AddItemToObject(root, "type", cJSON_CreateString("host_definition"));
+        cJSON_AddItemToObject(root, "message_type", cJSON_CreateString("host_definition"));
         cJSON_AddItemToObject(root, "data", data=cJSON_CreateObject());
         cJSON_AddStringToObject(data, "timestamp", timestamp);
         
@@ -4393,7 +4430,7 @@ int ndomod_write_object_config(int config_type){
         
         root = cJSON_CreateObject();
         cJSON_AddItemToObject(root, "instance_name", cJSON_CreateString(ndomod_instance_name));
-        cJSON_AddItemToObject(root, "type", cJSON_CreateString("service_definition"));
+        cJSON_AddItemToObject(root, "message_type", cJSON_CreateString("service_definition"));
         cJSON_AddItemToObject(root, "data", data=cJSON_CreateObject());
         cJSON_AddStringToObject(data, "timestamp", timestamp);
         
