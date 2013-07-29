@@ -1923,10 +1923,56 @@ int ndomod_broker_data(int event_type, void *data){
 			 ,(es[7]==NULL)?"":es[7]
 			 ,NDO_API_ENDDATA
 			);
+        
+        /* start create json object*/
+        cJSON *json_root, *json_data, *json_parents;
+        char *json_out;
+        char *timestamp = calloc(sizeof(char), 128);
+        sprintf(timestamp, "%ld.%ld", scdata->timestamp.tv_sec, scdata->timestamp.tv_usec);
+        
+        json_root = cJSON_CreateObject();
+        cJSON_AddItemToObject(json_root, "instance_name", cJSON_CreateString(ndomod_instance_name));
+        cJSON_AddItemToObject(json_root, "type", cJSON_CreateString("service_check"));
+        cJSON_AddItemToObject(json_root, "data", json_data=cJSON_CreateObject());
+        cJSON_AddStringToObject(json_data, "timestamp", timestamp);
+        
+        cJSON_AddNumberToObject(json_data, "type", scdata->type);
+        cJSON_AddNumberToObject(json_data, "flags", scdata->flags);
+        cJSON_AddNumberToObject(json_data, "attr", scdata->attr);
+        
+        cJSON_AddStringToObject(json_data, "host", (es[0]==NULL)?"":es[0]);
+        cJSON_AddStringToObject(json_data, "service", (es[1]==NULL)?"":es[1]);
+        
+        cJSON_AddNumberToObject(json_data, "check_type", scdata->check_type);
+        cJSON_AddNumberToObject(json_data, "current_attempt", scdata->current_attempt);
+        cJSON_AddNumberToObject(json_data, "max_attempts", scdata->max_attempts);
+        cJSON_AddNumberToObject(json_data, "state_type", scdata->state_type);
+        cJSON_AddNumberToObject(json_data, "state", scdata->state);
+        cJSON_AddNumberToObject(json_data, "timeout", scdata->timeout);
+        
+        cJSON_AddStringToObject(json_data, "command_name", (es[2]==NULL)?"":es[2]);
+        cJSON_AddStringToObject(json_data, "command_args", (es[3]==NULL)?"":es[3]);
+        cJSON_AddStringToObject(json_data, "command_line", (es[4]==NULL)?"":es[4]);
+        
+        cJSON_AddNumberToObject(json_data, "return_code", scdata->return_code);
+        
+        cJSON_AddStringToObject(json_data, "output", (es[5]==NULL)?"":es[5]);
+        cJSON_AddStringToObject(json_data, "long_output", (es[6]==NULL)?"":es[6]);
+        cJSON_AddStringToObject(json_data, "perfdata", (es[7]==NULL)?"":es[7]);
+        
+        // send JSON message to RabbitMQ server
+        json_out = cJSON_PrintUnformatted(json_root);
+        if(rabbitmq_enabled) {
+            send_msg_to_rabbitmq(json_out);
+        }
+        
+        free(json_out);
+        free(timestamp);
+        /* end json process */
 
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndo_dbuf_strcat(&dbuf,temp_buffer);
-
+        
 		break;
 
 	case NEBCALLBACK_HOST_CHECK_DATA:
