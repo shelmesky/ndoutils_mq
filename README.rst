@@ -11,29 +11,28 @@
 按照正常方法安装ndoutils和RabbitMQ服务器，并将ndomod加载到Nagios中，设置配置文件为：/etc/nagios3/ndomod.cfg。
 在ndomod.cfg配置文件中增加以下内容::
 
-# 是否打开NEB向RabbitMQ发送消息的功能
-rabbitmq_enabled=1
+    # 是否打开NEB向RabbitMQ发送消息的功能
+    rabbitmq_enabled=1
+    
+    # RabbitMQ主机
+    rabbitmq_hostname=127.0.0.1
+    # RabbitMQ端口
+    rabbitmq_port=5672
+    # RabbitMQ用户名
+    rabbitmq_username=guest
+    # RabbitMQ密码
+    rabbitmq_password=guest
 
-# RabbitMQ主机
-rabbitmq_hostname=127.0.0.1
-# RabbitMQ端口
-rabbitmq_port=5672
-# RabbitMQ用户名
-rabbitmq_username=guest
-# RabbitMQ密码
-rabbitmq_password=guest
-
-# RabbitMQ的virtualhost，默认为/
-rabbitmq_virtualhost=/
-# 发送消息使用的exchange名称
-rabbitmq_exchange=nagios
-# 发送消息使用的routing key
-rabbitmq_routingkey=nagios
-
+    # RabbitMQ的virtualhost，默认为/
+    rabbitmq_virtualhost=/
+    # 发送消息使用的exchange名称
+    rabbitmq_exchange=nagios
+    # 发送消息使用的routing key
+    rabbitmq_routingkey=nagios
 
 增加以上内容完毕保存，运行目录下的recv.py::
 
-python recv.py
+    python recv.py
 
 并重启nagios3服务，观察Nagios3的WEB控制台的Event Log有以下输出::
 
