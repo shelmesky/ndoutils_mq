@@ -93,7 +93,7 @@ char *rabbitmq_exchange = NULL;
 char *rabbitmq_routingkey = NULL;
 
 /* MongoDB Configuration */
-int mongodb_enabled = NDO_FALSE;
+int mongodb_enabled = NDO_TRUE;
 char *mongodb_host = NULL;
 int mongodb_port = 0;
 
@@ -294,6 +294,7 @@ int ndomod_init(void){
     /* end rabbitmq process*/
     
     /* Start Connect to MongoDB Server */
+    if(mongodb_enabled) {
     char *string_buf = calloc(sizeof(char), 512);
     
     mongo *conn = (mongo *)calloc(sizeof(mongo), 1);
@@ -322,8 +323,37 @@ int ndomod_init(void){
             (mongodb_host == NULL)?"127.0.0.1":mongodb_host,
             (mongodb_port == 0)?27017:mongodb_port);
     ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+    
+    // insert data to instance table
+    bson query[1];
+    bson_init(query);
+    bson_append_string(query,
+                        "instance_name",
+                        (ndomod_instance_name==NULL)?"default":ndomod_instance_name);
+    bson_finish(query);
+    int mg_ret = mongo_find_one(mongo_conn,
+                                "wisemonitor.instance",
+                                query,
+                                bson_shared_empty(),
+                                NULL);
+    if(mg_ret !=0 ){
+        //record not exists
+        bson b[1];
+        bson_init(b);
+        bson_append_new_oid(b, "_id");
+        bson_append_string(b,
+                            "instance_name",
+                            (ndomod_instance_name==NULL)?"default":ndomod_instance_name);
+        bson_finish(b);
+        
+        if(mongo_insert(mongo_conn, "wisemonitor.instance", b, NULL) != MONGO_OK) {
+            sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
+            ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+            }
+        }
     free(string_buf);
-    /* end mongodb process */
+    }
+    // End insert
     
     
 	char temp_buffer[NDOMOD_MAX_BUFLEN];
@@ -754,7 +784,7 @@ int ndomod_hello_sink(int reconnect, int problem_disconnect){
 		 ,(ndomod_instance_name==NULL)?"default":ndomod_instance_name
 		 ,NDO_API_STARTDATADUMP
 		);
-
+    
 	temp_buffer[sizeof(temp_buffer)-1]='\x0';
 
 	ndomod_write_to_sink(temp_buffer,NDO_FALSE,NDO_FALSE);
