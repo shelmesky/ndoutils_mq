@@ -92,9 +92,16 @@ char *rabbitmq_virtualhost = NULL;
 char *rabbitmq_exchange = NULL;
 char *rabbitmq_routingkey = NULL;
 
+/* MongoDB Configuration */
+int mongodb_enabled = NDO_FALSE;
+char *mongodb_host = NULL;
+int mongodb_port = 0;
+
 int status;
 amqp_socket_t *mq_socket;
 amqp_connection_state_t mq_conn;
+
+mongo *mongo_conn;
     
 
 /**** NAGIOS VARIABLES ****/
@@ -281,9 +288,42 @@ int ndomod_init(void){
         memset(string_buf, 0, 512);
         sprintf(string_buf, "RabbitMQ has disabled in config file.");
         ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+        free(string_buf);
     }
     
     /* end rabbitmq process*/
+    
+    /* Start Connect to MongoDB Server */
+    char *string_buf = calloc(sizeof(char), 512);
+    
+    mongo *conn = (mongo *)calloc(sizeof(mongo), 1);
+    mongo_conn = conn;
+    if(mongo_client(conn,
+        (mongodb_host == NULL)?"127.0.0.1":mongodb_host,
+        (mongodb_port == 0)?27017:mongodb_port) != MONGO_OK){
+            switch((conn)->err)
+            {
+                case MONGO_CONN_SUCCESS:
+                    break;
+                case MONGO_CONN_NO_SOCKET:
+                    sprintf(string_buf, "MongoDB FAIL: Cloud not create a socket!");
+                    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                    break;
+                case MONGO_CONN_FAIL:
+                    sprintf(string_buf, "MongoDB FAIL: Could not connect to mongod!.");
+                    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                    break;
+                default:
+                    sprintf(string_buf, "MongoDB connection error number: %d.\n", (conn)->err);
+                    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+            }
+    }
+    sprintf(string_buf, "MongoDB has connected to %s:%d",
+            (mongodb_host == NULL)?"127.0.0.1":mongodb_host,
+            (mongodb_port == 0)?27017:mongodb_port);
+    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+    free(string_buf);
+    /* end mongodb process */
     
     
 	char temp_buffer[NDOMOD_MAX_BUFLEN];

@@ -20,7 +20,7 @@ INSTALL_OPTS=-o nagios -g nagios
 
 CC=gcc
 
-CFLAGS=-g -O2 -I/usr/include/mysql -DHAVE_CONFIG_H 
+CFLAGS=-g -O2 -I/usr/include/mysql -DHAVE_CONFIG_H
 
 # We don't like ANSI because ANSI doesn't like us! phhht!
 #CFLAGS=-g -Wall -ansi -pedantic -DHAVE_CONFIG_H
@@ -37,7 +37,7 @@ DBCFLAGS=
 DBLDFLAGS=
 DBLIBS= -L/usr/lib/x86_64-linux-gnu -lmysqlclient -lpthread -lz -lm -lrt -ldl
 MATHLIBS=-lm
-OTHERLIBS=-lrabbitmq
+OTHERLIBS=-lrabbitmq -lmongoc
 
 COMMON_INC=$(SRC_INCLUDE)/config.h $(SRC_INCLUDE)/common.h $(SRC_INCLUDE)/io.h $(SRC_INCLUDE)/protoapi.h $(SRC_INCLUDE)/utils.h
 COMMON_SRC=io.c utils.c

@@ -288,3 +288,4 @@ typedef int int32_t;
 #include "cJSON.h"
 #include <amqp_ssl_socket.h>
 #include <amqp_framing.h>
+#include <mongo.h>
