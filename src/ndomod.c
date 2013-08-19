@@ -231,7 +231,7 @@ void *get_instance_object_id(char *instance_name,
     
     // query instance_id by instance_name in table 'instance'
     int mg_ret = mongo_find_one(mongo_conn,
-                                "wisemonitor.instance",
+                                "wisemonitor.nagios_instance",
                                 query,
                                 bson_shared_empty(),
                                 result); 
@@ -260,7 +260,7 @@ void *get_instance_object_id(char *instance_name,
             
             // query object_id by name1 in table 'objects'
             mg_ret = mongo_find_one(mongo_conn,
-                                    "wisemonitor.objects",
+                                    "wisemonitor.nagios_objects",
                                     query_objects,
                                     bson_shared_empty(),
                                     result);
@@ -310,7 +310,7 @@ void *get_instance_object_id(char *instance_name,
                 bson_append_int(b, "is_active", 1);
                 bson_finish(b);
                 
-                if(mongo_insert(mongo_conn, "wisemonitor.objects", b, NULL) != MONGO_OK) {
+                if(mongo_insert(mongo_conn, "wisemonitor.nagios_objects", b, NULL) != MONGO_OK) {
                     char *string_buf = calloc(sizeof(char), 512);
                     sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
                     ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
@@ -450,7 +450,7 @@ int ndomod_init(void){
                         (ndomod_instance_name==NULL)?"default":ndomod_instance_name);
     bson_finish(query);
     int mg_ret = mongo_find_one(mongo_conn,
-                                "wisemonitor.instance",
+                                "wisemonitor.nagios_instance",
                                 query,
                                 bson_shared_empty(),
                                 NULL);
@@ -464,7 +464,7 @@ int ndomod_init(void){
                             (ndomod_instance_name==NULL)?"default":ndomod_instance_name);
         bson_finish(b);
         
-        if(mongo_insert(mongo_conn, "wisemonitor.instance", b, NULL) != MONGO_OK) {
+        if(mongo_insert(mongo_conn, "wisemonitor.nagios_instance", b, NULL) != MONGO_OK) {
             sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
             ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
             }
@@ -4296,7 +4296,7 @@ int ndomod_write_object_config(int config_type){
         bson_append_string(query_hosts, "host_name", (es[0]==NULL)?"":es[0]);
         bson_finish(query_hosts);
         mg_ret = mongo_find_one(mongo_conn,
-                                "wisemonitor.hosts",
+                                "wisemonitor.nagios_hosts",
                                 query_hosts,
                                 bson_shared_empty(),
                                 NULL
@@ -4373,7 +4373,7 @@ int ndomod_write_object_config(int config_type){
         bson_finish(b);
         
         if(mg_ret != 0) {
-            if(mongo_insert(mongo_conn, "wisemonitor.hosts", b, NULL) != MONGO_OK) {
+            if(mongo_insert(mongo_conn, "wisemonitor.nagios_hosts", b, NULL) != MONGO_OK) {
                 char *string_buf = calloc(sizeof(char), 512);
                 sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
                 ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
@@ -4387,7 +4387,7 @@ int ndomod_write_object_config(int config_type){
             bson_finish(op);
             
             int update_ret = mongo_update(mongo_conn,
-                                          "wisemonitor.hosts",
+                                          "wisemonitor.nagios_hosts",
                                           query_hosts,
                                           op,
                                           MONGO_UPDATE_MULTI,
@@ -4788,7 +4788,7 @@ int ndomod_write_object_config(int config_type){
         bson_append_string(query_services, "service_description", (es[1]==NULL)?"":es[1]);
         bson_finish(query_services);
         mg_ret = mongo_find_one(mongo_conn,
-                                "wisemonitor.services",
+                                "wisemonitor.nagios_services",
                                 query_services,
                                 bson_shared_empty(),
                                 NULL
@@ -4825,7 +4825,7 @@ int ndomod_write_object_config(int config_type){
         bson_finish(b);
         
         if(mg_ret != 0) {
-            if(mongo_insert(mongo_conn, "wisemonitor.services", b, NULL) != MONGO_OK) {
+            if(mongo_insert(mongo_conn, "wisemonitor.nagios_services", b, NULL) != MONGO_OK) {
                 char *string_buf = calloc(sizeof(char), 512);
                 sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
                 ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
@@ -4839,7 +4839,7 @@ int ndomod_write_object_config(int config_type){
             bson_finish(op);
             
             int update_ret = mongo_update(mongo_conn,
-                                          "wisemonitor.services",
+                                          "wisemonitor.nagios_services",
                                           query_services,
                                           op,
                                           MONGO_UPDATE_MULTI,
