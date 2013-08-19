@@ -300,7 +300,12 @@ void *get_instance_object_id(char *instance_name,
                 if(service_name != NULL) {
                     bson_append_string(b, "name2", service_name);
                 }
-                bson_append_int(b, "objecttype_id", 1);
+                if(service_name != NULL) {
+                    bson_append_int(b, "objecttype_id", 2);
+                }
+                else {
+                    bson_append_int(b, "objecttype_id", 1);
+                }
                 // set to active
                 bson_append_int(b, "is_active", 1);
                 bson_finish(b);
@@ -4749,6 +4754,103 @@ int ndomod_write_object_config(int config_type){
         free(out);
         free(timestamp);
         /* end json process */
+        
+        
+        /*  Start MongoDB Porcess */
+        char *instance_id_global = (char *)calloc(sizeof(char), 512);
+        char *object_id_global = (char *)calloc(sizeof(char), 512);
+        get_instance_object_id((ndomod_instance_name==NULL)?"default":ndomod_instance_name,
+                               (es[0]==NULL)?"":es[0],
+                               (es[1]==NULL)?"":es[1],
+                               &instance_id_global,
+                               &object_id_global);
+        
+        /*
+        char *string_buf = calloc(sizeof(char), 512);
+        sprintf(string_buf, "instance_id: %s, object_id: %s",
+                instance_id_global, object_id_global);
+        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+        free(string_buf);
+        */
+        
+        int mg_ret;
+        bson_oid_t oid_instance[1];
+        bson_oid_t oid_object[1];
+        bson_oid_from_string(oid_instance, instance_id_global);
+        bson_oid_from_string(oid_object, object_id_global);
+        
+        // check if we have record in table 'objects'
+        bson query_services[1];
+        bson_init(query_services);
+        bson_append_oid(query_services, "instance_id", oid_instance);
+        bson_append_oid(query_services, "object_id", oid_object);
+        bson_append_string(query_services, "host_name", (es[0]==NULL)?"":es[0]);
+        bson_append_string(query_services, "service_description", (es[1]==NULL)?"":es[1]);
+        bson_finish(query_services);
+        mg_ret = mongo_find_one(mongo_conn,
+                                "wisemonitor.services",
+                                query_services,
+                                bson_shared_empty(),
+                                NULL
+                               );
+        
+        // Insert host information to mongodb
+        bson b[1];
+        bson_init(b);
+        if(mg_ret != 0) {
+            // if is a new record
+            // add instance_id and object_id for host
+            bson_append_oid(b, "instance_id", oid_instance);
+            bson_append_oid(b, "object_id", oid_object);
+        }
+        
+        timestamp = calloc(sizeof(char), 128);
+        sprintf(timestamp, "%ld.%ld", now.tv_sec, now.tv_usec);
+        
+        bson_append_string(b, "last_update", timestamp);
+        bson_append_string(b, "host_name", (es[0]==NULL)?"":es[0]);
+        bson_append_string(b, "display_name", (es[12]==NULL)?"":es[0]);
+        bson_append_string(b, "service_description", (es[1]==NULL)?"":es[1]);
+        bson_append_string(b, "service_check_command", (es[2]==NULL)?"":es[2]);
+        bson_append_string(b, "service_event_handler", (es[3]==NULL)?"":es[3]);
+        
+        bson_append_int(b, "service_check_interval", (double)temp_service->check_interval);
+        bson_append_int(b, "service_retry_interval", (double)temp_service->retry_interval);
+        bson_append_int(b, "service_notification_interval", (double)temp_service->notification_interval);
+        
+        bson_append_string(b, "notes", (es[7]==NULL)?"":es[7]);
+        bson_append_string(b, "notes_url", (es[8]==NULL)?"":es[8]);
+        bson_append_string(b, "action_url", (es[9]==NULL)?"":es[9]);
+        bson_append_string(b, "icon_image", (es[10]==NULL)?"":es[10]);
+        bson_finish(b);
+        
+        if(mg_ret != 0) {
+            if(mongo_insert(mongo_conn, "wisemonitor.services", b, NULL) != MONGO_OK) {
+                char *string_buf = calloc(sizeof(char), 512);
+                sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
+                ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                free(string_buf);
+            }
+        }
+        else {
+            bson op[1];
+            bson_init(op);
+            bson_append_bson(op, "$set", b);
+            bson_finish(op);
+            
+            int update_ret = mongo_update(mongo_conn,
+                                          "wisemonitor.services",
+                                          query_services,
+                                          op,
+                                          MONGO_UPDATE_MULTI,
+                                          0);
+            bson_destroy(op);
+        }
+        bson_destroy(b);
+        bson_destroy(query_services);
+        free(timestamp);
+        
+        /* End MongoDB Process */
         
 		free(es[0]);
 		es[0]=NULL;
