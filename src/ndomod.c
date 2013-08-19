@@ -2197,6 +2197,110 @@ int ndomod_broker_data(int event_type, void *data){
         free(timestamp);
         /* end json process */
     }
+    
+    {
+        /* Start MongoDB Process */
+        char *instance_id_global = (char *)calloc(sizeof(char), 512);
+        char *object_id_global = (char *)calloc(sizeof(char), 512);
+        get_instance_object_id((ndomod_instance_name==NULL)?"default":ndomod_instance_name,
+                               (es[0]==NULL)?"":es[0],
+                               (es[1]==NULL)?"":es[1],
+                               &instance_id_global,
+                               &object_id_global);
+        
+        char *string_buf = calloc(sizeof(char), 512);
+        sprintf(string_buf, "instance_id: %s, object_id: %s",
+                instance_id_global, object_id_global);
+        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+        free(string_buf);
+        
+        int mg_ret;
+        bson_oid_t oid_instance[1];
+        bson_oid_t oid_object[1];
+        bson_oid_from_string(oid_instance, instance_id_global);
+        bson_oid_from_string(oid_object, object_id_global);
+        
+        // check if we have record in table 'host_status'
+        bson query[1];
+        bson_init(query);
+        bson_append_oid(query, "instance_id", oid_instance);
+        bson_append_oid(query, "object_id", oid_object);
+        bson_append_string(query, "host", (es[0]==NULL)?"":es[0]);
+        bson_append_string(query, "service", (es[1]==NULL)?"":es[1]);
+        bson_finish(query);
+        mg_ret = mongo_find_one(mongo_conn,
+                                "wisemonitor.nagios_service_status",
+                                query,
+                                bson_shared_empty(),
+                                NULL
+                               );
+        
+        // Insert host information to mongodb
+        bson b[1];
+        bson_init(b);
+        if(mg_ret != 0) {
+            // if is a new record
+            // add instance_id and object_id for host
+            bson_append_oid(b, "instance_id", oid_instance);
+            bson_append_oid(b, "object_id", oid_object);
+        }
+        
+        char *timestamp = calloc(sizeof(char), 128);
+        sprintf(timestamp, "%ld.%ld", scdata->timestamp.tv_sec, scdata->timestamp.tv_usec);
+        
+        bson_append_string(b, "last_update", timestamp);
+        bson_append_int(b, "type", scdata->type);
+        bson_append_int(b, "flags", scdata->flags);
+        bson_append_int(b, "attr", scdata->attr);
+        
+        bson_append_string(b, "host", (es[0]==NULL)?"":es[0]);
+        bson_append_string(b, "service", (es[1]==NULL)?"":es[1]);
+        
+        bson_append_int(b, "check_type", scdata->check_type);
+        bson_append_int(b, "current_attempt", scdata->current_attempt);
+        bson_append_int(b, "max_attempts", scdata->max_attempts);
+        bson_append_int(b, "state_type", scdata->state_type);
+        bson_append_int(b, "state", scdata->state);
+        bson_append_int(b, "timeout", scdata->timeout);
+        
+        bson_append_string(b, "command_name", (es[2]==NULL)?"":es[2]);
+        bson_append_string(b, "command_args", (es[3]==NULL)?"":es[3]);
+        bson_append_string(b, "command_line", (es[4]==NULL)?"":es[4]);
+        
+        bson_append_int(b, "return_code", scdata->return_code);
+        
+        bson_append_string(b, "output", (es[5]==NULL)?"":es[5]);
+        bson_append_string(b, "long_output", (es[6]==NULL)?"":es[6]);
+        bson_append_string(b, "perfdata", (es[7]==NULL)?"":es[7]);
+        
+        bson_finish(b);
+        
+        if(mg_ret != 0) {
+            if(mongo_insert(mongo_conn, "wisemonitor.nagios_service_status", b, NULL) != MONGO_OK) {
+                char *string_buf = calloc(sizeof(char), 512);
+                sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
+                ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                free(string_buf);
+            }
+        }
+        else {
+            bson op[1];
+            bson_init(op);
+            bson_append_bson(op, "$set", b);
+            bson_finish(op);
+            
+            int update_ret = mongo_update(mongo_conn,
+                                          "wisemonitor.nagios_service_status",
+                                          query,
+                                          op,
+                                          MONGO_UPDATE_MULTI,
+                                          0);
+            bson_destroy(op);
+            bson_destroy(query);
+        }
+        bson_destroy(b);
+        /* End MongoDB Process */
+    }
 
 		temp_buffer[sizeof(temp_buffer)-1]='\x0';
 		ndo_dbuf_strcat(&dbuf,temp_buffer);
