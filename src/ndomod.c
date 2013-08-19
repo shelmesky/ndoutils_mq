@@ -4254,18 +4254,36 @@ int ndomod_write_object_config(int config_type){
         ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
         free(string_buf);
         */
+        bson_oid_t oid_instance[1];
+        bson_oid_t oid_object[1];
+        bson_oid_from_string(oid_instance, instance_id_global);
+        bson_oid_from_string(oid_object, object_id_global);
+        
+        // check if we have record in table 'objects'
+        bson query_hosts[1];
+        bson_init(query_hosts);
+        bson_append_oid(query_hosts, "instance_id", oid_instance);
+        bson_append_oid(query_hosts, "object_id", oid_object);
+        bson_append_string(query_hosts, "host_name", (es[0]==NULL)?"":es[0]);
+        bson_finish(query_hosts);
+        mg_ret = mongo_find_one(mongo_conn,
+                                "wisemonitor.hosts",
+                                query_hosts,
+                                bson_shared_empty(),
+                                NULL
+                               );
         
         // Insert host information to mongodb
         bson b[1];
-        bson_oid_t oid_instance[1];
-        bson_oid_t oid_object[1];
         bson_init(b);
-        // add instance_id and object_id for host
-        bson_oid_from_string(oid_instance, instance_id_global);
-        bson_append_oid(b, "instance_id", oid_instance);
-        bson_oid_from_string(oid_object, object_id_global);
-        bson_append_oid(b, "object_id", oid_object);
+        if(mg_ret != 0) {
+            // if is a new record
+            // add instance_id and object_id for host
+            bson_append_oid(b, "instance_id", oid_instance);
+            bson_append_oid(b, "object_id", oid_object);
+        }
         
+        bson_append_string(b, "last_update", timestamp);
         bson_append_string(b, "host_name", (es[0]==NULL)?"":es[0]);
         bson_append_string(b, "display_name", (es[15]==NULL)?"":es[15]);
         bson_append_string(b, "host_alias", (es[1]==NULL)?"":es[1]);
@@ -4325,11 +4343,28 @@ int ndomod_write_object_config(int config_type){
         bson_append_finish_array(b);
         bson_finish(b);
         
-        if(mongo_insert(mongo_conn, "wisemonitor.hosts", b, NULL) != MONGO_OK) {
-            char *string_buf = calloc(sizeof(char), 512);
-            sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
-            ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
-            free(string_buf);
+        if(mg_ret != 0) {
+            if(mongo_insert(mongo_conn, "wisemonitor.hosts", b, NULL) != MONGO_OK) {
+                char *string_buf = calloc(sizeof(char), 512);
+                sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
+                ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                free(string_buf);
+            }
+        }
+        else {
+            bson op[1];
+            bson_init(op);
+            bson_append_bson(op, "$set", b);
+            bson_finish(op);
+            
+            int update_ret = mongo_update(mongo_conn,
+                                          "wisemonitor.hosts",
+                                          query_hosts,
+                                          op,
+                                          MONGO_UPDATE_MULTI,
+                                          0);
+            bson_destroy(op);
+            bson_destroy(query_hosts);
         }
         bson_destroy(b);
 
