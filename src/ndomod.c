@@ -4148,6 +4148,113 @@ int ndomod_write_object_config(int config_type){
         parents = cJSON_CreateArray();
         cJSON_AddItemToObject(data, "parent_hosts", parents);
         
+        // start insert host definition to MongoDB
+        // first we should query to make sure if host_name in table 'objects'.
+        // if not we add record in table 'objects' with:
+        // 1. 'instance_id': get it from table 'instance' with parameter 'instane_name' 
+        // 2. 'object_id': will auto generation by MongoDB client 
+        
+        // else we get the object_id and instance_id fileds from table 'objects'
+        // with query parameter 'host_name'
+        bson query[1], result[1];
+        bson_init(query);
+        bson_append_string(query,
+                            "instance_name",
+                            (ndomod_instance_name==NULL)?"default":ndomod_instance_name);
+        bson_finish(query);
+        
+        // query instance_id by instance_name in table 'instance'
+        int mg_ret = mongo_find_one(mongo_conn,
+                                    "wisemonitor.instance",
+                                    query,
+                                    bson_shared_empty(),
+                                    result); 
+        
+        // set global var for instance_id and object_id
+        char *instance_id_global = NULL;
+        char *object_id_global = NULL;
+        
+        // if we found record in table 'instance'
+        if (mg_ret == 0) {
+            char instance_id[256];
+            bson_iterator it[1];
+            bson_oid_t * oid;
+            bson_find(it, result, "instance_id");
+            oid = bson_iterator_oid(it);
+            bson_oid_to_string(oid, instance_id);
+            
+            instance_id_global = instance_id;
+            
+            if(strlen(instance_id) > 0) {
+                bson query_objects[1];
+                bson_init(query_objects);
+                bson_append_string(query_objects, "name1", (es[0]==NULL)?"":es[0]);
+                bson_finish(query_objects);
+                
+                // query object_id by name1 in table 'objects'
+                mg_ret = mongo_find_one(mongo_conn,
+                                        "wisemonitor.objects",
+                                        query_objects,
+                                        bson_shared_empty(),
+                                        result);
+                // if web found record in table 'objects'
+                // get object_id
+                if(mg_ret == 0) {
+                    bson_iterator it[1];
+                    char obj_id[256];
+                    bson_oid_t *object_oid;
+                    bson_find(it, result, "object_id");
+                    object_oid = bson_iterator_oid(it);
+                    bson_oid_to_string(object_oid, obj_id);
+                    
+                    object_id_global = obj_id;
+                }
+                // if cannot found
+                // insert record to table 'objects'
+                else {
+                    // we generate a object_id for next use
+                    bson_oid_t oid_object[1];
+                    bson_oid_gen(oid_object);
+                    char obj_id[256];
+                    bson_oid_to_string(oid_object, obj_id);
+                    
+                    object_id_global = obj_id;
+                    
+                    bson b[1];
+                    bson_oid_t oid_instance[1];
+                    bson_init(b);
+                    bson_append_oid(b, "object_id", oid_object);
+                    // add instance_id
+                    bson_oid_from_string(oid_instance, instance_id);
+                    bson_append_oid(b, "instance_id", oid_instance);
+                    // add hostname
+                    bson_append_string(b, "name1", (es[0]==NULL)?"":es[0]);
+                    // set name2 to NULL, cause we are host_definition
+                    // not a service_definition
+                    //bson_append_string(b, "name1", NULL);
+                    bson_append_int(b, "objecttype_id", 1);
+                    // set to active
+                    bson_append_int(b, "is_active", 1);
+                    bson_finish(b);
+                    
+                    if(mongo_insert(mongo_conn, "wisemonitor.objects", b, NULL) != MONGO_OK) {
+                        char *string_buf = calloc(sizeof(char), 512);
+                        sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
+                        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                        free(string_buf);
+                    }
+                }
+            }
+        }
+        
+        /*
+        char *string_buf = calloc(sizeof(char), 512);
+        sprintf(string_buf, "instance_id: %s, object_id: %s",
+                instance_id_global, object_id_global);
+        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+        free(string_buf);
+        */
+        
         free(es[0]);
         es[0]=NULL;
 
