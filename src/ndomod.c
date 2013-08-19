@@ -4255,6 +4255,43 @@ int ndomod_write_object_config(int config_type){
         free(string_buf);
         */
         
+        // Insert host information to mongodb
+        bson b[1];
+        bson_oid_t oid_instance[1];
+        bson_oid_t oid_object[1];
+        bson_init(b);
+        // add instance_id and object_id for host
+        bson_oid_from_string(oid_instance, instance_id_global);
+        bson_append_oid(b, "instance_id", oid_instance);
+        bson_oid_from_string(oid_object, object_id_global);
+        bson_append_oid(b, "object_id", oid_object);
+        
+        bson_append_string(b, "host_name", (es[0]==NULL)?"":es[0]);
+        bson_append_string(b, "display_name", (es[15]==NULL)?"":es[15]);
+        bson_append_string(b, "host_alias", (es[1]==NULL)?"":es[1]);
+        bson_append_string(b, "host_address", (es[2]==NULL)?"":es[2]);
+        bson_append_string(b, "host_check_command", (es[3]==NULL)?"":es[3]);
+        bson_append_string(b, "host_event_handler", (es[4]==NULL)?"":es[4]);
+        bson_append_string(b, "host_notification_period", (es[5]==NULL)?"":es[5]);
+        bson_append_string(b, "host_check_period", (es[6]==NULL)?"":es[6]);
+        bson_append_string(b, "host_failure_prediction_options", (es[7]==NULL)?"":es[7]);
+        
+        bson_append_int(b, "host_check_interval", (double)temp_host->check_interval);
+        bson_append_int(b, "host_retry_interval", (double)retry_interval);
+        bson_append_int(b, "host_max_check_attempts", temp_host->max_attempts);
+        bson_append_int(b, "first_notification_delay", first_notification_delay);
+        bson_append_int(b, "host_notification_interval", (double)temp_host->notification_interval);
+        bson_append_int(b, "notify_host_down", temp_host->notify_on_down);
+        bson_append_int(b, "notify_host_unreachable", temp_host->notify_on_unreachable);
+        bson_append_int(b, "notify_host_recovery", temp_host->notify_on_recovery);
+        bson_append_int(b, "notify_host_flapping", temp_host->notify_on_flapping);
+        bson_append_int(b, "notify_host_down_time", notify_on_host_downtime);
+        bson_append_int(b, "host_flap_detection_enable", temp_host->flap_detection_enabled);
+        
+        // add parent_hosts to bson object
+        bson_append_start_array(b, "parent_hosts");
+        int PH_count = 0;
+        
         free(es[0]);
         es[0]=NULL;
 
@@ -4274,9 +4311,27 @@ int ndomod_write_object_config(int config_type){
             // add parent host to JSON object
             cJSON_AddItemToArray(parents, cJSON_CreateString((es[0]==NULL)?"":es[0]));
             
+            // add parent host to json object
+            char temp_id[128];
+            sprintf(temp_id, "%d", PH_count);
+            bson_append_start_object(b, temp_id);
+            bson_append_string(b, temp_id, (es[0]==NULL)?"":es[0]);
+            bson_append_finish_object(b);
+            
 			free(es[0]);
 			es[0]=NULL;
+            PH_count++;
 		        }
+        bson_append_finish_array(b);
+        bson_finish(b);
+        
+        if(mongo_insert(mongo_conn, "wisemonitor.hosts", b, NULL) != MONGO_OK) {
+            char *string_buf = calloc(sizeof(char), 512);
+            sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
+            ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+            free(string_buf);
+        }
+        bson_destroy(b);
 
 		/* dump contactgroups */
 		for(temp_contactgroupsmember=temp_host->contact_groups;temp_contactgroupsmember!=NULL;temp_contactgroupsmember=temp_contactgroupsmember->next){
