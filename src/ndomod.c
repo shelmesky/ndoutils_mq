@@ -2250,7 +2250,12 @@ int ndomod_broker_data(int event_type, void *data){
         char *timestamp = calloc(sizeof(char), 128);
         sprintf(timestamp, "%ld.%ld", scdata->timestamp.tv_sec, scdata->timestamp.tv_usec);
         
-        bson_append_string(b, "last_update", timestamp);
+        time_t timep;
+        time(&timep);
+        char *last_update = asctime(localtime(&timep));
+        ndomod_strip(last_update);
+        bson_append_string(b, "last_update", last_update);
+        bson_append_string(b, "timestamp", timestamp);
         bson_append_int(b, "type", scdata->type);
         bson_append_int(b, "flags", scdata->flags);
         bson_append_int(b, "attr", scdata->attr);
@@ -2493,7 +2498,12 @@ int ndomod_broker_data(int event_type, void *data){
         char *timestamp = calloc(sizeof(char), 128);
         sprintf(timestamp, "%ld.%ld", hcdata->timestamp.tv_sec, hcdata->timestamp.tv_usec);
         
-        bson_append_string(b, "last_update", timestamp);
+        time_t timep;
+        time(&timep);
+        char *last_update = asctime(localtime(&timep));
+        ndomod_strip(last_update);
+        bson_append_string(b, "last_update", last_update);
+        bson_append_string(b, "timestamp", timestamp);
         bson_append_int(b, "type", hcdata->type);
         bson_append_int(b, "flags", hcdata->flags);
         bson_append_int(b, "attr", hcdata->attr);
@@ -4526,7 +4536,12 @@ int ndomod_write_object_config(int config_type){
             bson_append_oid(b, "object_id", oid_object);
         }
         
-        bson_append_string(b, "last_update", timestamp);
+        time_t timep;
+        time(&timep);
+        char *last_update = asctime(localtime(&timep));
+        ndomod_strip(last_update);
+        bson_append_string(b, "last_update", last_update);
+        bson_append_string(b, "timestamp", timestamp);
         bson_append_string(b, "host_name", (es[0]==NULL)?"":es[0]);
         bson_append_string(b, "display_name", (es[15]==NULL)?"":es[15]);
         bson_append_string(b, "host_alias", (es[1]==NULL)?"":es[1]);
@@ -5021,7 +5036,12 @@ int ndomod_write_object_config(int config_type){
         timestamp = calloc(sizeof(char), 128);
         sprintf(timestamp, "%ld.%ld", now.tv_sec, now.tv_usec);
         
-        bson_append_string(b, "last_update", timestamp);
+        time_t timep;
+        time(&timep);
+        char *last_update = asctime(localtime(&timep));
+        ndomod_strip(last_update);
+        bson_append_string(b, "last_update", last_update);
+        bson_append_string(b, "timestamp", timestamp);
         bson_append_string(b, "host_name", (es[0]==NULL)?"":es[0]);
         bson_append_string(b, "display_name", (es[12]==NULL)?"":es[0]);
         bson_append_string(b, "service_description", (es[1]==NULL)?"":es[1]);
