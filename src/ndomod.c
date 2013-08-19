@@ -340,7 +340,7 @@ int ndomod_init(void){
         //record not exists
         bson b[1];
         bson_init(b);
-        bson_append_new_oid(b, "_id");
+        bson_append_new_oid(b, "instance_id");
         bson_append_string(b,
                             "instance_name",
                             (ndomod_instance_name==NULL)?"default":ndomod_instance_name);
