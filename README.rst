@@ -1,6 +1,6 @@
 注意：代码仍处于不断更新阶段，请随时更新。
 
-对Nagios的Ndoutils增加向RabbitMQ Server发送消息的功能。
+对Nagios的Ndoutils增加向RabbitMQ Server发送消息并存储到MongoDB的功能。
 ---------------------------
 
 过程: 将消息转换为JSON格式后，通过RabbitMQ的C客户端发送到服务器。
@@ -41,3 +41,11 @@
 [2013-07-25 16:33:39] RabbitMQ Library Init...
 
 表示功能正常工作，并可以看到python的客户端已经从RabbitMQ收到消息。 
+
+同时会在MongoDB中生成以下表：
+1. nagios_instance 当有多个Nagios实例时，存储每个实例的信息
+2. nagios_objects  每个实例的对象，例如主机和服务定义
+3. nagios_hosts    主机定义
+4. nagios_host_status 主机的最新状态
+5. nagios_services 服务定义
+6. nagios_service_status 服务的最新状态
