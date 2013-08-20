@@ -42,10 +42,13 @@
 
 表示功能正常工作，并可以看到python的客户端已经从RabbitMQ收到消息。 
 
-同时会在MongoDB中生成以下表：
-1. nagios_instance 当有多个Nagios实例时，存储每个实例的信息
-2. nagios_objects  每个实例的对象，例如主机和服务定义
-3. nagios_hosts    主机定义
-4. nagios_host_status 主机的最新状态
-5. nagios_services 服务定义
-6. nagios_service_status 服务的最新状态
+同时会在MongoDB中生成以下表::
+
+    nagios_instance 当有多个Nagios实例时，存储每个实例的信息
+    nagios_objects  每个实例的对象，例如主机和服务定义
+    nagios_hosts    主机定义
+    nagios_host_status 主机的最新状态
+    nagios_services 服务定义
+    nagios_service_status 服务的最新状态
+
+
