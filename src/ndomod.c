@@ -97,6 +97,11 @@ int mongodb_enabled = NDO_TRUE;
 char *mongodb_host = NULL;
 int mongodb_port = 0;
 
+char *mongodb_username = NULL;
+char *mongodb_password = NULL;
+
+char *mongodb_database = "wisemonitor";
+
 int status;
 amqp_socket_t *mq_socket;
 amqp_connection_state_t mq_conn;
@@ -437,6 +442,27 @@ int ndomod_init(void){
                     ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
             }
     }
+
+    sprintf(string_buf, "username:%s password: %s", mongodb_username, mongodb_password);
+    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+
+    // if has mongodb_username set, authenticate user 
+    if(mongodb_username != NULL) {
+        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+        if(mongo_cmd_authenticate(conn,
+            (mongodb_database == NULL)?"wisemonitor":mongodb_database,
+            (mongodb_username == NULL)?"admin":mongodb_username,
+            (mongodb_password == NULL)?"":mongodb_password) == MONGO_OK) {
+            
+			sprintf(string_buf, "MongoDB Auth Success!");
+			ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+        }
+		else {
+            sprintf(string_buf, "MongoDB Auth Failed!");
+            ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+		}
+    }
+    
     sprintf(string_buf, "MongoDB has connected to %s:%d",
             (mongodb_host == NULL)?"127.0.0.1":mongodb_host,
             (mongodb_port == 0)?27017:mongodb_port);
@@ -684,6 +710,7 @@ int ndomod_process_config_var(char *arg){
 	ndomod_strip(var);
 	ndomod_strip(val);
 
+    char *string_buf = calloc(sizeof(char), 512);
 	/* process the variable... */
 
 	if(!strcmp(var,"config_file"))
@@ -789,6 +816,52 @@ int ndomod_process_config_var(char *arg){
     {
         rabbitmq_routingkey = strdup(val);
     }
+    
+    /* Process MongoDB Configuration in config file */
+    else if(!strcmp(var, "mongodb_enabled"))
+    {
+        if(strlen(val) == 1)
+        {
+            if(isdigit((int)val[strlen(val)-1]) != NDO_FALSE)
+            {
+                mongodb_enabled = atoi(val);
+            }
+            else
+            {
+                mongodb_enabled = 0;
+            }
+        }
+    }
+    
+    else if(!strcmp(var, "mongodb_hostname"))
+    {
+        mongodb_host = strdup(val);
+    }
+    
+    else if(!strcmp(var, "mongodb_port"))
+    {
+        mongodb_port = atoi(val);
+    }
+    
+    else if(!strcmp(var, "mongodb_username"))
+    {
+		if(strlen(val) > 0) {
+			mongodb_username = strdup(val);
+		}
+    }
+    
+    else if(!strcmp(var, "mongodb_password"))
+    {
+        if(strlen(val) > 0) {
+            mongodb_password = strdup(val);
+        }
+    }
+    
+    else if(!strcmp(var, "mongodb_database"))
+    {
+        mongodb_database = strdup(val);
+    }
+    
     
 	else
 		return NDO_ERROR;
