@@ -442,9 +442,15 @@ int ndomod_init(void){
                     ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
             }
     }
+	else {
+		sprintf(string_buf, "MongoDB has connected to %s:%d",
+				(mongodb_host == NULL)?"127.0.0.1":mongodb_host,
+				(mongodb_port == 0)?27017:mongodb_port);
+		ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+	}
 
-    sprintf(string_buf, "username:%s password: %s", mongodb_username, mongodb_password);
-    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+    //sprintf(string_buf, "username:%s password: %s", mongodb_username, mongodb_password);
+    //ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
 
     // if has mongodb_username set, authenticate user 
     if(mongodb_username != NULL) {
@@ -462,11 +468,6 @@ int ndomod_init(void){
             ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
 		}
     }
-    
-    sprintf(string_buf, "MongoDB has connected to %s:%d",
-            (mongodb_host == NULL)?"127.0.0.1":mongodb_host,
-            (mongodb_port == 0)?27017:mongodb_port);
-    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
     
     // insert data to instance table
     bson query[1];
