@@ -1,9 +1,9 @@
 注意：代码仍处于不断更新阶段，请随时更新。
 
 对Nagios的Ndoutils增加向RabbitMQ Server发送消息并存储到MongoDB的功能。
-==========================
+-----------------------
 
-过程: 将消息转换为JSON格式后，通过RabbitMQ的C客户端发送到服务器。
+过程: 将消息转换为JSON格式后，通过RabbitMQ的C客户端发送到服务器, 并存储到MongoDB。
 
 有任何问题可联系：roy@rootk.com
 
