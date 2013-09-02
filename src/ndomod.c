@@ -92,6 +92,8 @@ char *rabbitmq_virtualhost = NULL;
 char *rabbitmq_exchange = NULL;
 char *rabbitmq_routingkey = NULL;
 
+int rabbitmq_connected = NDO_FALSE;
+
 /* MongoDB Configuration */
 int mongodb_enabled = NDO_TRUE;
 char *mongodb_host = NULL;
@@ -101,6 +103,8 @@ char *mongodb_username = NULL;
 char *mongodb_password = NULL;
 
 char *mongodb_database = "wisemonitor";
+
+int mongodb_connected = NDO_FALSE;
 
 int status;
 amqp_socket_t *mq_socket;
@@ -404,6 +408,7 @@ int ndomod_init(void){
                 );
         ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
         
+        rabbitmq_connected = NDO_TRUE;
         free(string_buf);
     }
     else{
@@ -418,91 +423,93 @@ int ndomod_init(void){
     
     /* Start Connect to MongoDB Server */
     if(mongodb_enabled) {
-    char *string_buf = (char *)calloc(sizeof(char), 1024);
-    
-    mongo *conn = (mongo *)calloc(sizeof(mongo), 1);
-    mongo_conn = conn;
-    if(mongo_client(conn,
-        (mongodb_host == NULL)?"127.0.0.1":mongodb_host,
-        (mongodb_port == 0)?27017:mongodb_port) != MONGO_OK){
-            switch((conn)->err)
-            {
-                case MONGO_CONN_SUCCESS:
-                    break;
-                case MONGO_CONN_NO_SOCKET:
-                    sprintf(string_buf, "MongoDB FAIL: Cloud not create a socket!");
-                    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
-                    break;
-                case MONGO_CONN_FAIL:
-                    sprintf(string_buf, "MongoDB FAIL: Could not connect to mongod!.");
-                    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
-                    break;
-                default:
-                    sprintf(string_buf, "MongoDB connection error number: %d.", (conn)->err);
-                    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
-            }
-    }
-	else {
-		sprintf(string_buf, "MongoDB has connected to %s:%d",
-				(mongodb_host == NULL)?"127.0.0.1":mongodb_host,
-				(mongodb_port == 0)?27017:mongodb_port);
-		ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
-	}
-
-    //sprintf(string_buf, "username:%s password: %s", mongodb_username, mongodb_password);
-    //ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
-
-    memset(string_buf, 0, sizeof(char)*1024);
-    // if has mongodb_username set, authenticate user 
-    if((mongodb_username != NULL) || (mongodb_password != NULL)) {
-        if((mongodb_username == NULL) || (mongodb_password == NULL)) {
-            sprintf(string_buf, "Neither MongoDB Username nor Password can be empty!");
-            ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+        char *string_buf = (char *)calloc(sizeof(char), 1024);
+        
+        mongo *conn = (mongo *)calloc(sizeof(mongo), 1);
+        mongo_conn = conn;
+        if(mongo_client(conn,
+            (mongodb_host == NULL)?"127.0.0.1":mongodb_host,
+            (mongodb_port == 0)?27017:mongodb_port) != MONGO_OK){
+                switch((conn)->err)
+                {
+                    case MONGO_CONN_SUCCESS:
+                        break;
+                    case MONGO_CONN_NO_SOCKET:
+                        sprintf(string_buf, "MongoDB FAIL: Cloud not create a socket!");
+                        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                        break;
+                    case MONGO_CONN_FAIL:
+                        sprintf(string_buf, "MongoDB FAIL: Could not connect to mongod!.");
+                        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                        break;
+                    default:
+                        sprintf(string_buf, "MongoDB connection error number: %d.", (conn)->err);
+                        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                }
         }
         else {
-            if(mongo_cmd_authenticate(conn,
-                (mongodb_database == NULL)?"wisemonitor":mongodb_database,
-                (mongodb_username == NULL)?"admin":mongodb_username,
-                (mongodb_password == NULL)?"":mongodb_password) == MONGO_OK) {
-                
-                sprintf(string_buf, "MongoDB Auth Success!");
+            sprintf(string_buf, "MongoDB has connected to %s:%d",
+                    (mongodb_host == NULL)?"127.0.0.1":mongodb_host,
+                    (mongodb_port == 0)?27017:mongodb_port);
+            ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+        }
+
+        //sprintf(string_buf, "username:%s password: %s", mongodb_username, mongodb_password);
+        //ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+
+        memset(string_buf, 0, sizeof(char)*1024);
+        // if has mongodb_username set, authenticate user 
+        if((mongodb_username != NULL) || (mongodb_password != NULL)) {
+            if((mongodb_username == NULL) || (mongodb_password == NULL)) {
+                sprintf(string_buf, "Neither MongoDB Username nor Password can be empty!");
                 ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
             }
             else {
-                sprintf(string_buf, "MongoDB Auth Failed!");
-                ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                if(mongo_cmd_authenticate(conn,
+                    (mongodb_database == NULL)?"wisemonitor":mongodb_database,
+                    (mongodb_username == NULL)?"admin":mongodb_username,
+                    (mongodb_password == NULL)?"":mongodb_password) == MONGO_OK) {
+                    
+                    sprintf(string_buf, "MongoDB Auth Success!");
+                    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                }
+                else {
+                    sprintf(string_buf, "MongoDB Auth Failed!");
+                    ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                }
             }
         }
-    }
-    
-    // insert data to instance table
-    bson query[1];
-    bson_init(query);
-    bson_append_string(query,
-                        "instance_name",
-                        (ndomod_instance_name==NULL)?"default":ndomod_instance_name);
-    bson_finish(query);
-    int mg_ret = mongo_find_one(mongo_conn,
-                                "wisemonitor.nagios_instance",
-                                query,
-                                bson_shared_empty(),
-                                NULL);
-    if(mg_ret !=0 ){
-        //record not exists
-        bson b[1];
-        bson_init(b);
-        bson_append_new_oid(b, "instance_id");
-        bson_append_string(b,
+        
+        // insert data to instance table
+        bson query[1];
+        bson_init(query);
+        bson_append_string(query,
                             "instance_name",
                             (ndomod_instance_name==NULL)?"default":ndomod_instance_name);
-        bson_finish(b);
-        
-        if(mongo_insert(mongo_conn, "wisemonitor.nagios_instance", b, NULL) != MONGO_OK) {
-            sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
-            ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+        bson_finish(query);
+        int mg_ret = mongo_find_one(mongo_conn,
+                                    "wisemonitor.nagios_instance",
+                                    query,
+                                    bson_shared_empty(),
+                                    NULL);
+        if(mg_ret !=0 ){
+            //record not exists
+            bson b[1];
+            bson_init(b);
+            bson_append_new_oid(b, "instance_id");
+            bson_append_string(b,
+                                "instance_name",
+                                (ndomod_instance_name==NULL)?"default":ndomod_instance_name);
+            bson_finish(b);
+            
+            if(mongo_insert(mongo_conn, "wisemonitor.nagios_instance", b, NULL) != MONGO_OK) {
+                sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
+                ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+                }
             }
-        }
-    free(string_buf);
+        
+        mongodb_connected = NDO_TRUE;
+        free(string_buf);
     }
     // End insert
     
@@ -561,16 +568,29 @@ int ndomod_init(void){
 
 /* performs some shutdown stuff */
 int ndomod_deinit(void){
-    /*Close RabbitMQ Connection */
-    amqp_channel_close(mq_conn, 1, AMQP_REPLY_SUCCESS);
-    amqp_connection_close(mq_conn, AMQP_REPLY_SUCCESS);
-    amqp_destroy_connection(mq_conn);
+    if(rabbitmq_enabled && rabbitmq_connected) {
+        /*Close RabbitMQ Connection */
+        amqp_channel_close(mq_conn, 1, AMQP_REPLY_SUCCESS);
+        amqp_connection_close(mq_conn, AMQP_REPLY_SUCCESS);
+        amqp_destroy_connection(mq_conn);
+        
+        char *string_buf = calloc(sizeof(char), 512);
+        memset(string_buf, 0, 512);
+        sprintf(string_buf, "RabbitMQ disconnect Success.");
+        ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        free(string_buf);
+    }
     
-    char *string_buf = calloc(sizeof(char), 512);
-    memset(string_buf, 0, 512);
-    sprintf(string_buf, "RabbitMQ disconnect Success.");
-    ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
-    free(string_buf);
+    if(mongodb_enabled && mongodb_connected) {
+        mongo_destroy(mongo_conn);
+        mongo_disconnect(mongo_conn);
+        
+        char *string_buf = calloc(sizeof(char), 512);
+        memset(string_buf, 0, 512);
+        sprintf(string_buf, "MongoDB disconnect Success.");
+        ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        free(string_buf);
+    }
 
 	/* deregister callbacks */
 	ndomod_deregister_callbacks();
