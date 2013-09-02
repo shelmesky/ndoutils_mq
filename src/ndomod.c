@@ -418,7 +418,7 @@ int ndomod_init(void){
     
     /* Start Connect to MongoDB Server */
     if(mongodb_enabled) {
-    char *string_buf = calloc(sizeof(char), 512);
+    char *string_buf = (char *)calloc(sizeof(char), 1024);
     
     mongo *conn = (mongo *)calloc(sizeof(mongo), 1);
     mongo_conn = conn;
@@ -438,7 +438,7 @@ int ndomod_init(void){
                     ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
                     break;
                 default:
-                    sprintf(string_buf, "MongoDB connection error number: %d.\n", (conn)->err);
+                    sprintf(string_buf, "MongoDB connection error number: %d.", (conn)->err);
                     ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
             }
     }
@@ -452,21 +452,27 @@ int ndomod_init(void){
     //sprintf(string_buf, "username:%s password: %s", mongodb_username, mongodb_password);
     //ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
 
+    memset(string_buf, 0, sizeof(char)*1024);
     // if has mongodb_username set, authenticate user 
-    if(mongodb_username != NULL) {
-        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
-        if(mongo_cmd_authenticate(conn,
-            (mongodb_database == NULL)?"wisemonitor":mongodb_database,
-            (mongodb_username == NULL)?"admin":mongodb_username,
-            (mongodb_password == NULL)?"":mongodb_password) == MONGO_OK) {
-            
-			sprintf(string_buf, "MongoDB Auth Success!");
-			ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
-        }
-		else {
-            sprintf(string_buf, "MongoDB Auth Failed!");
+    if((mongodb_username != NULL) || (mongodb_password != NULL)) {
+        if((mongodb_username == NULL) || (mongodb_password == NULL)) {
+            sprintf(string_buf, "Neither MongoDB Username nor Password can be empty!");
             ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
-		}
+        }
+        else {
+            if(mongo_cmd_authenticate(conn,
+                (mongodb_database == NULL)?"wisemonitor":mongodb_database,
+                (mongodb_username == NULL)?"admin":mongodb_username,
+                (mongodb_password == NULL)?"":mongodb_password) == MONGO_OK) {
+                
+                sprintf(string_buf, "MongoDB Auth Success!");
+                ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+            }
+            else {
+                sprintf(string_buf, "MongoDB Auth Failed!");
+                ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+            }
+        }
     }
     
     // insert data to instance table
