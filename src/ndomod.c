@@ -364,25 +364,32 @@ void send_msg_to_rabbitmq(char const * msg){
 int ndomod_init(void){
     /* start connect to rabbitmq server*/
     if(rabbitmq_enabled){
-        char *string_buf = calloc(sizeof(char), 512);
+        int status;
+        char *string_buf = (char *)calloc(sizeof(char), 512);
+        amqp_rpc_reply_t reply;
         
         memset(string_buf, 0, 512);
         sprintf(string_buf, "RabbitMQ Library Init...");
         ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
         
+        // init new connection
         mq_conn = amqp_new_connection();
         
-        int mq_sock;
-        mq_sock = amqp_open_socket((rabbitmq_hostname==NULL)?"127.0.0.1":rabbitmq_hostname,
-                                (rabbitmq_port==0)?5672:rabbitmq_port);
-        if(!mq_sock)
-        {
-            memset(string_buf, 0, 512);
-            sprintf(string_buf, "RabbitMQ cannot opening connection...");
+        if((mq_socket = amqp_tcp_socket_new(mq_conn)) == NULL) {
+            
+            memset(string_buf, 0, sizeof(char)*512);
+            sprintf(string_buf, "RabbitMQ amqp_tcp_socket_new FAILED...");
             ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
         }
-        amqp_set_sockfd(mq_conn, mq_sock);
-        amqp_login(mq_conn,
+        
+        if((status = amqp_socket_open(mq_socket, (rabbitmq_hostname == NULL)?"127.0.0.1":rabbitmq_hostname,
+                                      (rabbitmq_port == 0)?5672:rabbitmq_port)) != AMQP_STATUS_OK) {
+            memset(string_buf, 0, sizeof(char)*512);
+            sprintf(string_buf, "RabbitMQ amqp_socket_open FAILED...");
+            ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+        }
+        
+        reply = amqp_login(mq_conn,
                 (rabbitmq_virtualhost==NULL)?"/":rabbitmq_virtualhost,
                 0,
                 131072,
@@ -390,12 +397,36 @@ int ndomod_init(void){
                 AMQP_SASL_METHOD_PLAIN,
                 (rabbitmq_username==NULL)?"guest":rabbitmq_username,
                 (rabbitmq_password==NULL)?"guest":rabbitmq_password);
+        
+        switch(reply.reply_type)
+        {
+            case AMQP_RESPONSE_NORMAL:
+            {
+                memset(string_buf, 0, sizeof(char)*512);
+                sprintf(string_buf, "RabbitMQ Init Success.");
+                ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+                break;
+            }
+            
+            case AMQP_RESPONSE_LIBRARY_EXCEPTION:
+            {
+                memset(string_buf, 0, sizeof(char)*512);
+                sprintf(string_buf, "RabbitMQ Init Failed: AMQP_RESPONSE_LIBRARY_EXCEPTION.");
+                ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+                break;
+            }
+            
+            case AMQP_RESPONSE_SERVER_EXCEPTION:
+            {
+                memset(string_buf, 0, sizeof(char)*512);
+                sprintf(string_buf, "RabbitMQ Init Failed: AMQP_RESPONSE_SERVER_EXCEPTION.");
+                ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
+                break;
+            }
+        }
+        
         amqp_channel_open(mq_conn, 1);
         amqp_get_rpc_reply(mq_conn);
-        
-        memset(string_buf, 0, 512);
-        sprintf(string_buf, "RabbitMQ Init Success.");
-        ndomod_write_to_logs(string_buf, NSLOG_INFO_MESSAGE);
         
         memset(string_buf, 0, 512);
         sprintf(string_buf,
