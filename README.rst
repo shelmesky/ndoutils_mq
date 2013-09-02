@@ -1,14 +1,18 @@
 注意：代码仍处于不断更新阶段，请随时更新。
 
 对Nagios的Ndoutils增加向RabbitMQ Server发送消息并存储到MongoDB的功能。
----------------------------
+==========================
 
 过程: 将消息转换为JSON格式后，通过RabbitMQ的C客户端发送到服务器。
 
 有任何问题可联系：roy@rootk.com
 
 安装方法：
+----------------------
 按照正常方法安装ndoutils和RabbitMQ服务器，并将ndomod加载到Nagios中，设置配置文件为：/etc/nagios3/ndomod.cfg。
+
+配置RabbitMQ:
+----------------------
 在ndomod.cfg配置文件中增加以下内容::
 
     # 是否打开NEB向RabbitMQ发送消息的功能
@@ -41,6 +45,27 @@
 [2013-07-25 16:33:39] RabbitMQ Library Init...
 
 表示功能正常工作，并可以看到python的客户端已经从RabbitMQ收到消息。 
+
+配置MongoDB:
+-------------------------
+在ndomod.cfg中增加以下内容::
+
+    # Configuration for MongoDB
+    mongodb_enabled=1
+    
+    mongodb_hostname=127.0.0.1
+    mongodb_port=27017
+
+    # leave username and password empty for NO Auth!
+    mongodb_username=
+    mongodb_password=
+
+    mongodb_database=wisemonitor
+
+重启Nagios3服务，会在Nagios3的WEB控制台的Event Log有以下输出::
+
+    [2013-09-02 11:51:35] MongoDB has connected to 127.0.0.1:27017
+
 
 同时会在MongoDB中生成以下表::
 
