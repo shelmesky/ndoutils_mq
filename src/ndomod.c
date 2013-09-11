@@ -2166,7 +2166,7 @@ int ndomod_broker_data(int event_type, void *data){
         cJSON *json_root, *json_data, *json_parents;
         char *json_out;
         char *timestamp = calloc(sizeof(char), 128);
-        sprintf(timestamp, "%ld.%ld", scdata->timestamp.tv_sec, scdata->timestamp.tv_usec);
+        sprintf(timestamp, "%ld.%ld", notdata->timestamp.tv_sec, notdata->timestamp.tv_usec);
         
         json_root = cJSON_CreateObject();
         cJSON_AddItemToObject(json_root, "instance_name", cJSON_CreateString(ndomod_instance_name));
