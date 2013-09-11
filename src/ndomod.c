@@ -2410,8 +2410,73 @@ int ndomod_broker_data(int event_type, void *data){
         bson_append_string(b, "output", (es[5]==NULL)?"":es[5]);
         bson_append_string(b, "long_output", (es[6]==NULL)?"":es[6]);
         bson_append_string(b, "perfdata", (es[7]==NULL)?"":es[7]);
-        
         bson_finish(b);
+	
+	// insert performance data to nagios_perfdata
+	if(es[7] != NULL) {
+	    bson perf[1];
+	    bson_init(perf);
+	    bson_append_new_oid(perf, "_id");
+	    bson_append_string(perf, "object_id", object_id_global);
+	    bson_append_string(perf, "timestamp", timestamp);
+	    bson_append_string(perf, "last_update", last_update);
+	    bson_append_start_array(perf, "perf_data");
+	    
+	    int i = 0;
+	    int in =0;
+	    char *buf = es[7];
+	    char *p[100];
+	    char *l1_ptr = NULL;
+	    char *l2_ptr = NULL;
+	    char *l3_ptr = NULL;
+	    char *buf_list = NULL;
+	    char *ret = NULL;
+
+	    while((p[in] = strtok_r(buf, " ", &l1_ptr)) != NULL) {
+		    int j = 0;
+		    char str_i[16];
+		    sprintf(str_i, "%d", i);
+		    bson_append_start_object(perf, str_i);
+		    
+		    buf = p[in];
+		    p[in] = strtok_r(buf, "=", &l2_ptr);
+		    
+		    bson_append_string(perf, "field", p[in]);
+		    bson_append_start_array(perf, "data");
+		    
+		    in++;
+		    
+		    p[in] = strtok_r(NULL, "=", &l2_ptr);
+		    buf_list = p[in];
+		    while((ret = strtok_r(buf_list, ";", &l3_ptr)) != NULL) {
+			char str_j[16];
+			sprintf(str_j, "%d", j);
+			bson_append_string(perf, str_j, ret);
+			buf_list = NULL;
+			j++;
+		    }
+		    in++;
+		    bson_append_finish_array(perf);
+		    
+		    buf=NULL;
+		    i++;
+		    
+		    bson_append_finish_object(perf);
+	    }
+	
+	    bson_append_finish_array(perf);
+	    bson_finish(perf);
+	
+	    if(mongo_insert(mongo_conn, "wisemonitor.nagios_service_perfdata", perf, NULL) != MONGO_OK) {
+		char *string_buf = calloc(sizeof(char), 512);
+		sprintf(string_buf, "MongoDB insert data error: %s", mongo_conn->lasterrstr);
+		ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+		free(string_buf);
+	    }
+	
+	bson_destroy(perf);
+	}
+
         
         if(mg_ret != 0) {
             if(mongo_insert(mongo_conn, "wisemonitor.nagios_service_status", b, NULL) != MONGO_OK) {
