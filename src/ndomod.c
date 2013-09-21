@@ -2670,10 +2670,14 @@ int ndomod_broker_data(int event_type, void *data){
 	bson_append_string(perf, "last_update", last_update);
 	bson_append_string(perf, "host_name", (es[0]==NULL)?"":es[0]);
 	bson_append_start_array(perf, "perf_data");
+    
+    //save es[6] to another, because strtok_r will change it!
+    char *perf_data_saved = (char *)calloc(sizeof(char), strlen(es[6]));
+    memcpy(perf_data_saved, es[6], strlen(es[6]));
 	
 	int i = 0;
 	int in =0;
-	char *buf = es[6];
+	char *buf = perf_data_saved;
 	char *p[100];
 	char *l1_ptr = NULL;
 	char *l2_ptr = NULL;
@@ -2727,6 +2731,7 @@ int ndomod_broker_data(int event_type, void *data){
 	free(timestamp);
 	free(instance_id_global);
 	free(object_id_global);
+    free(perf_data_saved);
     }
 
     

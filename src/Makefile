@@ -20,7 +20,7 @@ INSTALL_OPTS=-o nagios -g nagios
 
 CC=gcc
 
-CFLAGS=-g -O2 -I/usr/include/mysql -DHAVE_CONFIG_H
+CFLAGS=-g -O2 -I/usr/include/mysql -DHAVE_CONFIG_H -DDEBUG_MEMORY
 
 # We don't like ANSI because ANSI doesn't like us! phhht!
 #CFLAGS=-g -Wall -ansi -pedantic -DHAVE_CONFIG_H
