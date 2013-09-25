@@ -2165,14 +2165,13 @@ int ndomod_broker_data(int event_type, void *data){
         {
         cJSON *json_root, *json_data, *json_parents;
         char *json_out;
-        char *timestamp = calloc(sizeof(char), 128);
-        sprintf(timestamp, "%ld.%ld", notdata->timestamp.tv_sec, notdata->timestamp.tv_usec);
+        long timestamp = notdata->timestamp.tv_sec;
         
         json_root = cJSON_CreateObject();
         cJSON_AddItemToObject(json_root, "instance_name", cJSON_CreateString(ndomod_instance_name));
         cJSON_AddItemToObject(json_root, "message_type", cJSON_CreateString("notification_check"));
         cJSON_AddItemToObject(json_root, "data", json_data=cJSON_CreateObject());
-        cJSON_AddStringToObject(json_data, "timestamp", timestamp);
+        cJSON_AddNumberToObject(json_data, "timestamp", timestamp);
         
         cJSON_AddNumberToObject(json_data, "type", notdata->type);
         cJSON_AddNumberToObject(json_data, "flags", notdata->flags);
@@ -2195,7 +2194,7 @@ int ndomod_broker_data(int event_type, void *data){
         }
         
         free(json_out);
-        free(timestamp);
+        //free(timestamp);
         /* end json process */
     }
 
@@ -2285,14 +2284,13 @@ int ndomod_broker_data(int event_type, void *data){
     {
         cJSON *json_root, *json_data, *json_parents;
         char *json_out;
-        char *timestamp = calloc(sizeof(char), 128);
-        sprintf(timestamp, "%ld.%ld", scdata->timestamp.tv_sec, scdata->timestamp.tv_usec);
+        long timestamp = scdata->timestamp.tv_sec;
         
         json_root = cJSON_CreateObject();
         cJSON_AddItemToObject(json_root, "instance_name", cJSON_CreateString(ndomod_instance_name));
         cJSON_AddItemToObject(json_root, "message_type", cJSON_CreateString("service_check"));
         cJSON_AddItemToObject(json_root, "data", json_data=cJSON_CreateObject());
-        cJSON_AddStringToObject(json_data, "timestamp", timestamp);
+        cJSON_AddNumberToObject(json_data, "timestamp", timestamp);
         
         cJSON_AddNumberToObject(json_data, "type", scdata->type);
         cJSON_AddNumberToObject(json_data, "flags", scdata->flags);
@@ -2325,7 +2323,7 @@ int ndomod_broker_data(int event_type, void *data){
         }
         
         free(json_out);
-        free(timestamp);
+        //free(timestamp);
         /* end json process */
     }
     
@@ -2378,15 +2376,14 @@ int ndomod_broker_data(int event_type, void *data){
             bson_append_oid(b, "object_id", oid_object);
         }
         
-        char *timestamp = calloc(sizeof(char), 128);
-        sprintf(timestamp, "%ld.%ld", scdata->timestamp.tv_sec, scdata->timestamp.tv_usec);
+        long timestamp = scdata->timestamp.tv_sec;
         
         time_t timep;
         time(&timep);
         char *last_update = asctime(localtime(&timep));
         ndomod_strip(last_update);
         bson_append_string(b, "last_update", last_update);
-        bson_append_string(b, "timestamp", timestamp);
+        bson_append_long(b, "timestamp", timestamp);
         bson_append_int(b, "type", scdata->type);
         bson_append_int(b, "flags", scdata->flags);
         bson_append_int(b, "attr", scdata->attr);
@@ -2418,7 +2415,7 @@ int ndomod_broker_data(int event_type, void *data){
 	    bson_init(perf);
 	    bson_append_new_oid(perf, "_id");
 	    bson_append_string(perf, "object_id", object_id_global);
-	    bson_append_string(perf, "timestamp", timestamp);
+	    bson_append_long(perf, "timestamp", timestamp);
 	    bson_append_string(perf, "last_update", last_update);
 	    bson_append_string(perf, "host_name", (es[0]==NULL)?"":es[0]);
 	    bson_append_string(perf, "service_description", (es[1]==NULL)?"":es[1]);
@@ -2592,14 +2589,13 @@ int ndomod_broker_data(int event_type, void *data){
     {
         cJSON *json_root, *json_data, *json_parents;
         char *json_out;
-        char *timestamp = calloc(sizeof(char), 128);
-        sprintf(timestamp, "%ld.%ld", hcdata->timestamp.tv_sec, hcdata->timestamp.tv_usec);
+        long timestamp = hcdata->timestamp.tv_sec;
         
         json_root = cJSON_CreateObject();
         cJSON_AddItemToObject(json_root, "instance_name", cJSON_CreateString(ndomod_instance_name));
         cJSON_AddItemToObject(json_root, "message_type", cJSON_CreateString("host_check"));
         cJSON_AddItemToObject(json_root, "data", json_data=cJSON_CreateObject());
-        cJSON_AddStringToObject(json_data, "timestamp", timestamp);
+        cJSON_AddNumberToObject(json_data, "timestamp", timestamp);
         
         cJSON_AddNumberToObject(json_data, "type", hcdata->type);
         cJSON_AddNumberToObject(json_data, "flags", hcdata->flags);
@@ -2640,7 +2636,7 @@ int ndomod_broker_data(int event_type, void *data){
         }
         
         free(json_out);
-        free(timestamp);
+        //free(timestamp);
         /* end json process */
     }
     
@@ -2654,8 +2650,7 @@ int ndomod_broker_data(int event_type, void *data){
                                &instance_id_global,
                                &object_id_global);
 	
-        char *timestamp = calloc(sizeof(char), 128);
-        sprintf(timestamp, "%ld.%ld", hcdata->timestamp.tv_sec, hcdata->timestamp.tv_usec);
+        long timestamp = hcdata->timestamp.tv_sec;
         
         time_t timep;
         time(&timep);
@@ -2666,7 +2661,7 @@ int ndomod_broker_data(int event_type, void *data){
 	bson_init(perf);
 	bson_append_new_oid(perf, "_id");
 	bson_append_string(perf, "object_id", object_id_global);
-	bson_append_string(perf, "timestamp", timestamp);
+	bson_append_long(perf, "timestamp", timestamp);
 	bson_append_string(perf, "last_update", last_update);
 	bson_append_string(perf, "host_name", (es[0]==NULL)?"":es[0]);
 	bson_append_start_array(perf, "perf_data");
@@ -2728,7 +2723,7 @@ int ndomod_broker_data(int event_type, void *data){
 	}
     
 	bson_destroy(perf);
-	free(timestamp);
+	//free(timestamp);
 	free(instance_id_global);
 	free(object_id_global);
     free(perf_data_saved);
@@ -2783,15 +2778,14 @@ int ndomod_broker_data(int event_type, void *data){
             bson_append_oid(b, "object_id", oid_object);
         }
         
-        char *timestamp = calloc(sizeof(char), 128);
-        sprintf(timestamp, "%ld.%ld", hcdata->timestamp.tv_sec, hcdata->timestamp.tv_usec);
+        long timestamp = hcdata->timestamp.tv_sec;
         
         time_t timep;
         time(&timep);
         char *last_update = asctime(localtime(&timep));
         ndomod_strip(last_update);
         bson_append_string(b, "last_update", last_update);
-        bson_append_string(b, "timestamp", timestamp);
+        bson_append_long(b, "timestamp", timestamp);
         bson_append_int(b, "type", hcdata->type);
         bson_append_int(b, "flags", hcdata->flags);
         bson_append_int(b, "attr", hcdata->attr);
@@ -2842,7 +2836,7 @@ int ndomod_broker_data(int event_type, void *data){
         bson_destroy(b);
         free(instance_id_global);
         free(object_id_global);
-        free(timestamp);
+        //free(timestamp);
         // End MongoDB Process
     }
         
@@ -4744,14 +4738,13 @@ int ndomod_write_object_config(int config_type){
         /* start create json object*/
         cJSON *root, *data, *parents;
         char *out;
-        char *timestamp = calloc(sizeof(char), 128);
-        sprintf(timestamp, "%ld.%ld", now.tv_sec, now.tv_usec);
+        long timestamp = now.tv_sec;
         
         root = cJSON_CreateObject();
         cJSON_AddItemToObject(root, "instance_name", cJSON_CreateString(ndomod_instance_name));
         cJSON_AddItemToObject(root, "message_type", cJSON_CreateString("host_definition"));
         cJSON_AddItemToObject(root, "data", data=cJSON_CreateObject());
-        cJSON_AddStringToObject(data, "timestamp", timestamp);
+        cJSON_AddNumberToObject(data, "timestamp", timestamp);
         
         cJSON_AddStringToObject(data, "host_name", (es[0]==NULL)?"":es[0]);
         cJSON_AddStringToObject(data, "display_name", (es[15]==NULL)?"":es[15]);
@@ -4829,7 +4822,7 @@ int ndomod_write_object_config(int config_type){
         char *last_update = asctime(localtime(&timep));
         ndomod_strip(last_update);
         bson_append_string(b, "last_update", last_update);
-        bson_append_string(b, "timestamp", timestamp);
+        bson_append_long(b, "timestamp", timestamp);
         bson_append_string(b, "host_name", (es[0]==NULL)?"":es[0]);
         bson_append_string(b, "display_name", (es[15]==NULL)?"":es[15]);
         bson_append_string(b, "host_alias", (es[1]==NULL)?"":es[1]);
@@ -5001,7 +4994,7 @@ int ndomod_write_object_config(int config_type){
         }
         */
         free(out);
-        free(timestamp);
+        //free(timestamp);
         /* end json process */
  
 	        }
@@ -5238,14 +5231,13 @@ int ndomod_write_object_config(int config_type){
         /* start create json object*/
         cJSON *root, *data, *parents;
         char *out;
-        char *timestamp = calloc(sizeof(char), 128);
-        sprintf(timestamp, "%ld.%ld", now.tv_sec, now.tv_usec);
+        long timestamp = now.tv_sec;
         
         root = cJSON_CreateObject();
         cJSON_AddItemToObject(root, "instance_name", cJSON_CreateString(ndomod_instance_name));
         cJSON_AddItemToObject(root, "message_type", cJSON_CreateString("service_definition"));
         cJSON_AddItemToObject(root, "data", data=cJSON_CreateObject());
-        cJSON_AddStringToObject(data, "timestamp", timestamp);
+        cJSON_AddNumberToObject(data, "timestamp", timestamp);
         
         cJSON_AddStringToObject(data, "host_name", (es[0]==NULL)?"":es[0]);
         cJSON_AddStringToObject(data, "display_name", (es[12]==NULL)?"":es[0]);
@@ -5269,7 +5261,7 @@ int ndomod_write_object_config(int config_type){
         }
         
         free(out);
-        free(timestamp);
+        //free(timestamp);
         /* end json process */
         
         
@@ -5321,15 +5313,13 @@ int ndomod_write_object_config(int config_type){
             bson_append_oid(b, "object_id", oid_object);
         }
         
-        timestamp = calloc(sizeof(char), 128);
-        sprintf(timestamp, "%ld.%ld", now.tv_sec, now.tv_usec);
         
         time_t timep;
         time(&timep);
         char *last_update = asctime(localtime(&timep));
         ndomod_strip(last_update);
         bson_append_string(b, "last_update", last_update);
-        bson_append_string(b, "timestamp", timestamp);
+        bson_append_long(b, "timestamp", timestamp);
         bson_append_string(b, "host_name", (es[0]==NULL)?"":es[0]);
         bson_append_string(b, "display_name", (es[12]==NULL)?"":es[0]);
         bson_append_string(b, "service_description", (es[1]==NULL)?"":es[1]);
@@ -5370,7 +5360,7 @@ int ndomod_write_object_config(int config_type){
         }
         bson_destroy(b);
         bson_destroy(query_services);
-        free(timestamp);
+        //free(timestamp);
         
         /* End MongoDB Process */
         
