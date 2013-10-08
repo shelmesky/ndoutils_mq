@@ -54,6 +54,15 @@ NEB_API_VERSION(CURRENT_NEB_API_VERSION)
 #define NDOMOD_NAME "NDOMOD"
 #define NDOMOD_DATE "06-08-2012"
 
+#define OVECCOUNT 30
+#define EBUFLEN 128
+#define BUFLEN 1024
+
+typedef struct data_unit_s {
+    char *data;
+    char *unit;
+} data_unit_t;
+
 
 void *ndomod_module_handle=NULL;
 char *ndomod_instance_name=NULL;
@@ -213,6 +222,74 @@ int ndomod_check_nagios_object_version(void){
 
 	return NDO_OK;
         }
+
+//simple log function
+static void logging(const char *msg) {
+        char *string_buf = calloc(sizeof(char), 512);
+        sprintf(string_buf, "%s", msg);
+        ndomod_write_to_logs(string_buf, NSLOG_SERVICE_WARNING);
+        free(string_buf);
+}
+        
+// split data and unit from performance data
+void *get_unit(struct data_unit_s ** data_unit, char *src) {
+    pcre *re;
+    
+    const char *error;
+    int erroroffset;
+    
+    int ovector[OVECCOUNT];
+    int rc, i;
+    char pattern[] = ".*\\d(\\w*)";
+    
+    re = pcre_compile(
+        pattern,
+        0,
+        &error,
+        &erroroffset,
+        NULL
+    );
+    
+    if(re == NULL) {
+        printf("PCRE complilation failed at offset %d: %s", erroroffset, error);
+        pcre_free(re);
+        return NULL;
+    }
+    
+    rc = pcre_exec(
+        re,
+        NULL,
+        src,
+        strlen(src),
+        0,
+        0,
+        ovector,
+        OVECCOUNT
+    );
+    
+    if(rc < 0) {
+        pcre_free(re);
+        return NULL;
+    }
+    
+    int unit_length = strlen(src + ovector[2]);
+    int data_length = strlen(src) - unit_length;
+    
+    *data_unit = (struct data_unit_s *)calloc(sizeof(struct data_unit_s), 1);
+    
+    char *data = (char *)calloc(sizeof(char), data_length + 1);
+    memccpy(data, src, 1, data_length);
+    data[data_length + 1] = '\0';
+    
+    char *unit = (char *)calloc(sizeof(char), unit_length + 1);
+    memcpy(unit, src + ovector[2], unit_length);
+    unit[unit_length + 1] = '\0';
+    
+    (*data_unit)->data = data;
+    (*data_unit)->unit = unit;
+    
+    pcre_free(re);
+}
         
         
 void *get_instance_object_id(char *instance_name,
@@ -2436,6 +2513,8 @@ int ndomod_broker_data(int event_type, void *data){
 		    char str_i[16];
 		    sprintf(str_i, "%d", i);
 		    bson_append_start_object(perf, str_i);
+            char *unit = NULL;
+            struct data_unit_s *data_unit = NULL;
 		    
 		    buf = p[in];
 		    p[in] = strtok_r(buf, "=", &l2_ptr);
@@ -2449,13 +2528,39 @@ int ndomod_broker_data(int event_type, void *data){
 		    buf_list = p[in];
 		    while((ret = strtok_r(buf_list, ";", &l3_ptr)) != NULL) {
 			char str_j[16];
-			sprintf(str_j, "%d", j);
-			bson_append_string(perf, str_j, ret);
 			buf_list = NULL;
+            sprintf(str_j, "%d", j);
+            
+            //split data and it's unit
+            if(j == 0){
+                get_unit(&data_unit, ret);
+                if(data_unit != NULL) {
+                    unit = data_unit->unit;
+                    bson_append_string(perf, str_j, data_unit->data);
+                }
+                else {
+                    bson_append_string(perf, str_j, ret);
+                }
+            }
+            else {
+                bson_append_string(perf, str_j, ret);
+            }
+            
 			j++;
 		    }
 		    in++;
 		    bson_append_finish_array(perf);
+            
+            // add unit to data
+            if(unit != NULL) {
+                bson_append_string(perf, "unit", unit);
+                free(data_unit->data);
+                free(data_unit->unit);
+                free(data_unit);
+            }
+            else {
+                bson_append_string(perf, "unit", "");
+            }
 		    
 		    buf=NULL;
 		    i++;
@@ -2685,6 +2790,8 @@ int ndomod_broker_data(int event_type, void *data){
 		char str_i[16];
 		sprintf(str_i, "%d", i);
 		bson_append_start_object(perf, str_i);
+        char *unit = NULL;
+        struct data_unit_s *data_unit = NULL;
 		
 		buf = p[in];
 		p[in] = strtok_r(buf, "=", &l2_ptr);
@@ -2696,15 +2803,42 @@ int ndomod_broker_data(int event_type, void *data){
 		
 		p[in] = strtok_r(NULL, "=", &l2_ptr);
 		buf_list = p[in];
+        
 		while((ret = strtok_r(buf_list, ";", &l3_ptr)) != NULL) {
 		    char str_j[16];
+            buf_list = NULL;
 		    sprintf(str_j, "%d", j);
-		    bson_append_string(perf, str_j, ret);
-		    buf_list = NULL;
-		    j++;
+            
+            //split data and it's unit
+            if(j == 0){
+                get_unit(&data_unit, ret);
+                if(data_unit != NULL) {
+                    unit = data_unit->unit;
+                    bson_append_string(perf, str_j, data_unit->data);
+                }
+                else {
+                    bson_append_string(perf, str_j, ret);
+                }
+            }
+            else {
+                bson_append_string(perf, str_j, ret);
+            }
+            
+        j++;
 		}
 		in++;
 		bson_append_finish_array(perf);
+        
+        // add unit to data
+        if(unit != NULL) {
+            bson_append_string(perf, "unit", unit);
+            free(data_unit->data);
+            free(data_unit->unit);
+            free(data_unit);
+        }
+        else {
+            bson_append_string(perf, "unit", "");
+        }
 		
 		buf=NULL;
 		i++;

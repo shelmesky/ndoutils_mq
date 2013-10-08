@@ -37,7 +37,7 @@ DBCFLAGS=
 DBLDFLAGS=
 DBLIBS= -L/usr/lib/x86_64-linux-gnu -lmysqlclient -lpthread -lz -lm -lrt -ldl
 MATHLIBS=-lm
-OTHERLIBS=-lrabbitmq -lmongoc
+OTHERLIBS=-lrabbitmq -lmongoc -lpcre
 
 COMMON_INC=$(SRC_INCLUDE)/config.h $(SRC_INCLUDE)/common.h $(SRC_INCLUDE)/io.h $(SRC_INCLUDE)/protoapi.h $(SRC_INCLUDE)/utils.h
 COMMON_SRC=io.c utils.c

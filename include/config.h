@@ -291,3 +291,4 @@ typedef int int32_t;
 #include <amqp_ssl_socket.h>
 #include <amqp_framing.h>
 #include <mongo.h>
+#include <pcre.h>
