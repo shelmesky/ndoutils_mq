@@ -2754,6 +2754,12 @@ int ndomod_broker_data(int event_type, void *data){
                                NULL,
                                &instance_id_global,
                                &object_id_global);
+        
+        //convert oid from string to bson_oid_t
+        bson_oid_t instance_id_oid[1];
+        bson_oid_t object_id_oid[1];
+        bson_oid_from_string(instance_id_oid, instance_id_global);
+        bson_oid_from_string(object_id_oid, object_id_global);
 	
         long timestamp = hcdata->timestamp.tv_sec;
         
@@ -2765,7 +2771,8 @@ int ndomod_broker_data(int event_type, void *data){
 	bson perf[1];
 	bson_init(perf);
 	bson_append_new_oid(perf, "_id");
-	bson_append_string(perf, "object_id", object_id_global);
+    bson_append_oid(perf, "instance_id", instance_id_oid);
+    bson_append_oid(perf, "object_id", object_id_oid);
 	bson_append_long(perf, "timestamp", timestamp);
 	bson_append_string(perf, "last_update", last_update);
 	bson_append_string(perf, "host_name", (es[0]==NULL)?"":es[0]);
