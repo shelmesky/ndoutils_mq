@@ -2491,7 +2491,8 @@ int ndomod_broker_data(int event_type, void *data){
 	    bson perf[1];
 	    bson_init(perf);
 	    bson_append_new_oid(perf, "_id");
-	    bson_append_string(perf, "object_id", object_id_global);
+        bson_append_oid(perf, "instance_id", oid_instance);
+	    bson_append_oid(perf, "object_id", oid_object);
 	    bson_append_long(perf, "timestamp", timestamp);
 	    bson_append_string(perf, "last_update", last_update);
 	    bson_append_string(perf, "host_name", (es[0]==NULL)?"":es[0]);
