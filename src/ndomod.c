@@ -2465,7 +2465,7 @@ int ndomod_broker_data(int event_type, void *data){
 	
         time_t timet;
         time(&timet);
-	bson_append_time_t(b, "last_update", timet);
+	bson_append_time_t(b, "last_update", timet + 28800);
 	
         bson_append_long(b, "timestamp", timestamp);
         bson_append_int(b, "type", scdata->type);
@@ -2502,7 +2502,7 @@ int ndomod_broker_data(int event_type, void *data){
 	    bson_append_oid(perf, "object_id", oid_object);
 	    bson_append_long(perf, "timestamp", timestamp);
 	    //bson_append_string(perf, "last_update", last_update);
-	    bson_append_time_t(perf, "last_update", timet);
+	    bson_append_time_t(perf, "last_update", timet + 28800);
 	    bson_append_string(perf, "host_name", (es[0]==NULL)?"":es[0]);
 	    bson_append_string(perf, "service_description", (es[1]==NULL)?"":es[1]);
 	    bson_append_start_array(perf, "perf_data");
@@ -2787,7 +2787,7 @@ int ndomod_broker_data(int event_type, void *data){
     bson_append_oid(perf, "instance_id", instance_id_oid);
     bson_append_oid(perf, "object_id", object_id_oid);
 	bson_append_long(perf, "timestamp", timestamp);
-	bson_append_time_t(perf, "last_update", timet);
+	bson_append_time_t(perf, "last_update", timet + 28800);
 	bson_append_string(perf, "host_name", (es[0]==NULL)?"":es[0]);
 	bson_append_start_array(perf, "perf_data");
     
@@ -2945,7 +2945,7 @@ int ndomod_broker_data(int event_type, void *data){
         time_t timet;
         time(&timet);
 	
-	bson_append_time_t(b, "last_update", timet);
+	bson_append_time_t(b, "last_update", timet + 28800);
         bson_append_long(b, "timestamp", timestamp);
         bson_append_int(b, "type", hcdata->type);
         bson_append_int(b, "flags", hcdata->flags);
@@ -4987,7 +4987,7 @@ int ndomod_write_object_config(int config_type){
         */
         time_t timep;
         time(&timep);
-        bson_append_time_t(b, "last_update", timep);
+        bson_append_time_t(b, "last_update", timep + 28800);
         bson_append_long(b, "timestamp", timestamp);
         bson_append_string(b, "host_name", (es[0]==NULL)?"":es[0]);
         bson_append_string(b, "display_name", (es[15]==NULL)?"":es[15]);
@@ -5489,7 +5489,7 @@ int ndomod_write_object_config(int config_type){
         */
         time_t timep;
         time(&timep);
-        bson_append_time_t(b, "last_update", timep);
+        bson_append_time_t(b, "last_update", timep + 28800);
         bson_append_long(b, "timestamp", timestamp);
         bson_append_string(b, "host_name", (es[0]==NULL)?"":es[0]);
         bson_append_string(b, "display_name", (es[12]==NULL)?"":es[0]);
